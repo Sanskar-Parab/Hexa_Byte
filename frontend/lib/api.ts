@@ -69,10 +69,10 @@ export const api = {
       body: JSON.stringify({ skill_id: skillId, proficiency }),
     }),
 
-  updateUserSkill: (userSkillId: string, proficiency: number) =>
+  updateUserSkill: (userSkillId: string, proficiency: number, skillId?: string) =>
     fetcher(`/skills/${userSkillId}`, {
       method: "PUT",
-      body: JSON.stringify({ skill_id: userSkillId, proficiency }),
+      body: JSON.stringify({ skill_id: skillId || userSkillId, proficiency }),
     }),
 
   deleteUserSkill: (userSkillId: string) =>
@@ -108,6 +108,9 @@ export const api = {
   getCareerDetail: (id: string) =>
     fetcher<any>(`/careers/${id}`),
 
+  getCareerIntelligence: (id: string) =>
+    fetcher<any>(`/careers/${id}/intelligence`),
+
   getRecommendations: () =>
     fetcher<any[]>("/careers/recommend", { method: "POST" }),
 
@@ -132,22 +135,22 @@ export const api = {
   },
 
   updatePhaseStatus: (phaseId: string, status: string) =>
-    fetcher(`/roadmap/phase/${phaseId}/status`, {
+    fetcher(`/roadmap/phase/${phaseId}/status?status=${encodeURIComponent(status)}`, {
       method: "PUT",
-      body: JSON.stringify({ status }),
     }),
 
   getProjectRecommendations: (careerId: string) =>
     fetcher<any[]>(`/projects/recommendations?career_id=${careerId}`),
 
   updateProjectStatus: (projectId: string, status: string) =>
-    fetcher(`/projects/${projectId}/status`, {
+    fetcher(`/projects/${projectId}/status?status=${encodeURIComponent(status)}`, {
       method: "POST",
-      body: JSON.stringify({ status }),
     }),
 
-  getDashboard: () =>
-    fetcher<any>("/progress/dashboard"),
+  getDashboard: (careerId?: string) => {
+    const params = careerId ? `?career_id=${careerId}` : "";
+    return fetcher<any>(`/progress/dashboard${params}`);
+  },
 
   updateProgress: (itemType: string, itemId: string, status: string) =>
     fetcher("/progress/update", {
@@ -161,6 +164,103 @@ export const api = {
       body: JSON.stringify({ question }),
     }),
 
+  getCoachContext: () =>
+    fetcher<any>("/coach/context"),
+
+  startSkillAssessment: (skillId: string) =>
+    fetcher<any>("/skill-assessment/start", {
+      method: "POST",
+      body: JSON.stringify({ skill_id: skillId }),
+    }),
+
+  checkAIStatus: () =>
+    fetcher<{ available: boolean; error: string | null }>("/skill-assessment/ai-status"),
+
+  submitSkillAssessment: (assessmentId: string, answers: { question_id: number; answer: string }[]) =>
+    fetcher<any>("/skill-assessment/submit", {
+      method: "POST",
+      body: JSON.stringify({ assessment_id: assessmentId, answers }),
+    }),
+
   loadDemo: () =>
     fetcher<any>("/demo/load", { method: "POST" }),
+
+  getAllEvidence: () =>
+    fetcher<any[]>("/evidence"),
+
+  getSkillEvidence: (skillId: string) =>
+    fetcher<any>(`/evidence/skill/${skillId}`),
+
+  getNextBestAction: (careerId?: string) =>
+    fetcher<any>("/next-best-action", {
+      method: "POST",
+      body: JSON.stringify({ career_id: careerId || null }),
+    }),
+
+  getUserDifficulty: () =>
+    fetcher<any>("/projects/user-difficulty"),
+
+  generateAIProjects: (careerId: string, count: number = 3) =>
+    fetcher<any>("/projects/generate-ai", {
+      method: "POST",
+      body: JSON.stringify({ career_id: careerId, count }),
+    }),
+
+  updatePreferredDifficulty: (difficulty: string) =>
+    fetcher<any>("/projects/preferred-difficulty", {
+      method: "PUT",
+      body: JSON.stringify({ difficulty }),
+    }),
+
+  getProjectStats: (careerId: string) =>
+    fetcher<any>(`/projects/stats?career_id=${careerId}`),
+
+  getAIGeneratedProjects: (careerId?: string) => {
+    const params = careerId ? `?career_id=${careerId}` : "";
+    return fetcher<any[]>(`/projects/ai-generated${params}`);
+  },
+
+  getProjectDetail: (projectId: string) =>
+    fetcher<any>(`/projects/${projectId}`),
+
+  uploadResume: (file: File) => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const formData = new FormData();
+    formData.append("file", file);
+    return fetch(`${API_BASE}/resume/upload`, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    }).then(async (res) => {
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ detail: "Upload failed" }));
+        throw new Error(error.detail || "Upload failed");
+      }
+      return res.json();
+    });
+  },
+
+  getResumes: () =>
+    fetcher<any[]>("/resume"),
+
+  getResume: (id: string) =>
+    fetcher<any>(`/resume/${id}`),
+
+  deleteResume: (id: string) =>
+    fetcher(`/resume/${id}`, { method: "DELETE" }),
+
+  analyzeJob: (jobDescription: string) =>
+    fetcher<any>("/job/analyze", {
+      method: "POST",
+      body: JSON.stringify({ job_description: jobDescription }),
+    }),
+
+  getJobHistory: () =>
+    fetcher<any[]>("/job/history"),
+
+  getJobAnalysis: (id: string) =>
+    fetcher<any>(`/job/${id}`),
+
+  deleteJobAnalysis: (id: string) =>
+    fetcher(`/job/${id}`, { method: "DELETE" }),
 };

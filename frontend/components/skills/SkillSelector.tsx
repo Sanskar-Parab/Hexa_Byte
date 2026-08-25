@@ -35,6 +35,7 @@ export function SkillSelector({
 }: SkillSelectorProps) {
   const [search, setSearch] = useState("");
   const [newProficiency, setNewProficiency] = useState(3);
+  const [addingSkill, setAddingSkill] = useState<string | null>(null);
 
   const selectedIds = new Set(selectedSkills.map((s) => s.skill.id));
 
@@ -46,8 +47,9 @@ export function SkillSelector({
 
   const grouped = filtered.reduce(
     (acc, skill) => {
-      if (!acc[skill.category]) acc[skill.category] = [];
-      acc[skill.category].push(skill);
+      const category = skill.category || "Other";
+      if (!acc[category]) acc[category] = [];
+      acc[category].push(skill);
       return acc;
     },
     {} as Record<string, Skill[]>
@@ -80,7 +82,7 @@ export function SkillSelector({
                       min={1}
                       max={5}
                       step={1}
-                      onValueChange={([v]) => onUpdateProficiency(item.skill.id, v)}
+                      onValueCommit={([v]) => onUpdateProficiency(item.skill.id, v)}
                     />
                     <p className="text-xs text-slate-500 text-center mt-1">
                       Level {item.proficiency} - {proficiencyLabels[item.proficiency]}
@@ -118,8 +120,13 @@ export function SkillSelector({
                 {skills.map((skill) => (
                   <button
                     key={skill.id}
-                    onClick={() => onAdd(skill.id, newProficiency)}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-slate-300 bg-slate-50 px-3 py-1.5 text-sm text-slate-600 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                    disabled={addingSkill === skill.id}
+                    onClick={() => {
+                      setAddingSkill(skill.id);
+                      onAdd(skill.id, newProficiency);
+                      setTimeout(() => setAddingSkill(null), 500);
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-slate-300 bg-slate-50 px-3 py-1.5 text-sm text-slate-600 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Plus className="h-3.5 w-3.5" />
                     {skill.name}

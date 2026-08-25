@@ -14,6 +14,7 @@ class Roadmap(Base):
     career_id = Column(GUID(), ForeignKey("careers.id"), nullable=False)
     summary = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     user = relationship("User", back_populates="roadmaps")
     career = relationship("Career")
@@ -34,5 +35,8 @@ class RoadmapPhase(Base):
     duration_weeks = Column(Integer)
     completion_criteria = Column(JSON)
     status = Column(String, default="not_started")  # not_started, in_progress, completed
+    adaptation_mode = Column(String, default="full")  # full, adapted, skipped
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     roadmap = relationship("Roadmap", back_populates="phases")

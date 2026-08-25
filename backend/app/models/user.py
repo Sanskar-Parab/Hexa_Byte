@@ -14,6 +14,7 @@ class User(Base):
     name = Column(String, nullable=False)
     password_hash = Column(String, nullable=False)
     is_demo = Column(Boolean, default=False)
+    preferred_difficulty = Column(String, default="AUTO")  # AUTO, BEGINNER, INTERMEDIATE, ADVANCED, INDUSTRY
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -24,4 +25,5 @@ class User(Base):
     career_recommendations = relationship("CareerRecommendation", back_populates="user")
     roadmaps = relationship("Roadmap", back_populates="user")
     recommended_projects = relationship("RecommendedProject", back_populates="user")
+    ai_generated_projects = relationship("AIGeneratedProject", back_populates="user")
     progress = relationship("UserProgress", back_populates="user")

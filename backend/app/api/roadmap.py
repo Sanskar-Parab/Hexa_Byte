@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -5,11 +6,23 @@ from sqlalchemy.orm import Session
 from app.database.config import get_db
 from app.models.user import User
 from app.models.roadmap import Roadmap, RoadmapPhase
+from app.models.progress import UserProgress
 from app.schemas.roadmap import RoadmapResponse, RoadmapCreate, RoadmapPhaseResponse
 from app.services.roadmap_service import generate_roadmap
 from app.utils.auth import get_current_user
 
 router = APIRouter(prefix="/api/roadmap", tags=["roadmap"])
+
+VALID_TRANSITIONS = {
+    "not_started": ["in_progress"],
+    "in_progress": ["completed", "not_started"],
+    "completed": ["not_started", "in_progress"],
+}
+
+
+def _validate_status_transition(current_status: str, new_status: str) -> bool:
+    allowed = VALID_TRANSITIONS.get(current_status, [])
+    return new_status in allowed
 
 
 @router.post("/generate")
@@ -64,10 +77,14 @@ def get_current_roadmap(
                 duration_weeks=p.duration_weeks,
                 completion_criteria=p.completion_criteria,
                 status=p.status,
+                adaptation_mode=p.adaptation_mode,
+                created_at=p.created_at,
+                updated_at=p.updated_at,
             )
             for p in phases
         ],
         created_at=roadmap.created_at,
+        updated_at=roadmap.updated_at,
     )
 
 
@@ -92,6 +109,40 @@ def update_phase_status(
     if not roadmap:
         raise HTTPException(status_code=403, detail="Not authorized")
 
+    if phase.adaptation_mode == "skipped" and status != "not_started":
+        raise HTTPException(status_code=400, detail="Cannot update status of skipped phase")
+
+    if not _validate_status_transition(phase.status, status):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot transition from '{phase.status}' to '{status}'",
+        )
+
     phase.status = status
+
+    now = datetime.utcnow()
+    progress = db.query(UserProgress).filter(
+        UserProgress.user_id == current_user.id,
+        UserProgress.item_type == "phase",
+        UserProgress.item_id == str(phase.id),
+    ).first()
+
+    if progress:
+        progress.status = status
+        if status == "in_progress" and not progress.started_at:
+            progress.started_at = now
+        if status == "completed" and not progress.completed_at:
+            progress.completed_at = now
+    else:
+        progress = UserProgress(
+            user_id=current_user.id,
+            item_type="phase",
+            item_id=str(phase.id),
+            status=status,
+            started_at=now if status == "in_progress" else None,
+            completed_at=now if status == "completed" else None,
+        )
+        db.add(progress)
+
     db.commit()
     return {"message": "Phase status updated", "status": status}

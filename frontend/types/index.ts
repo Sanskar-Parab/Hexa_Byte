@@ -36,6 +36,9 @@ export interface UserSkill {
   skill_id: string;
   skill_name: string;
   proficiency: number;
+  level_name: string | null;
+  confidence: string | null;
+  created_at: string;
 }
 
 export interface Interest {
@@ -72,7 +75,42 @@ export interface CareerRecommendation {
   why_it_matches: string[];
   strengths: string[];
   skill_gaps: string[];
+  biggest_blocker: string | null;
+  recommended_action: string | null;
   created_at: string;
+}
+
+export interface SkillDetail {
+  skill_name: string;
+  importance: number;
+  user_proficiency: number;
+  evidence_confidence: string;
+  gap: number;
+  status: "strong" | "developing" | "gap";
+}
+
+export interface UserSkillBrief {
+  name: string;
+  proficiency: number;
+  confidence: string;
+}
+
+export interface CareerIntelligence {
+  career_id: string;
+  career_name: string;
+  match_score: number;
+  confidence: string;
+  why_matches: string[];
+  strengths: string[];
+  skill_gaps: string[];
+  biggest_blocker: string | null;
+  recommended_action: string | null;
+  skill_details: SkillDetail[];
+  user_current_skills: UserSkillBrief[];
+  learning_sequence: any[];
+  description: string;
+  required_skills: string[];
+  optional_skills: string[];
 }
 
 export interface AssessmentQuestion {
@@ -123,6 +161,7 @@ export interface Roadmap {
   summary: string;
   phases: RoadmapPhase[];
   created_at: string;
+  updated_at: string | null;
 }
 
 export interface RoadmapPhase {
@@ -136,6 +175,9 @@ export interface RoadmapPhase {
   duration_weeks: number;
   completion_criteria: string[];
   status: "not_started" | "in_progress" | "completed";
+  adaptation_mode: "full" | "adapted" | "skipped";
+  created_at: string | null;
+  updated_at: string | null;
 }
 
 export interface Project {
@@ -197,4 +239,200 @@ export interface DashboardData {
 export interface CoachResponse {
   response: string;
   source: string;
+}
+
+export interface SkillEvidence {
+  id: string;
+  source_type: string;
+  source_id: string | null;
+  title: string;
+  description: string | null;
+  score: number | null;
+  confidence: string;
+  metadata: Record<string, any> | null;
+  created_at: string;
+}
+
+export interface SkillEvidenceResponse {
+  skill_id: string;
+  skill_name: string;
+  proficiency: number;
+  level_name: string | null;
+  confidence: string;
+  evidence: SkillEvidence[];
+}
+
+export interface NextBestAction {
+  action: string | null;
+  title: string;
+  description: string;
+  why: string;
+  current: string | null;
+  target: string | null;
+  skill_name: string | null;
+  priority_score: number;
+  career_id: string | null;
+  career_name: string | null;
+  metadata: Record<string, any>;
+  all_candidates: {
+    action: string;
+    title: string;
+    score: number;
+  }[];
+}
+
+export interface SkillAwareProject {
+  id: string;
+  project: Project;
+  career_id: string;
+  composite_score: number;
+  career_relevance: number;
+  gap_relevance: number;
+  roadmap_relevance: number;
+  difficulty_fit: number;
+  covers_skills: string[];
+  gap_skills_covered: string[];
+  project_difficulty: string;
+  user_difficulty: string;
+  status: string;
+  is_ai_generated: boolean;
+}
+
+export interface AIGeneratedProject {
+  title: string;
+  description: string;
+  difficulty: string;
+  why_this_project: string;
+  skills_practiced: string[];
+  skills_targeted: string[];
+  duration: string;
+  learning_objectives: string[];
+  deliverables: string[];
+  completion_criteria: string[];
+}
+
+export interface AIGeneratedProjectDB {
+  id: string;
+  user_id: string;
+  career_id: string;
+  title: string;
+  description: string;
+  difficulty: string;
+  why_this_project: string;
+  skills_practiced: string[];
+  skills_targeted: string[];
+  duration: string;
+  learning_objectives: string[];
+  deliverables: string[];
+  completion_criteria: string[];
+  status: string;
+  created_at: string;
+}
+
+export interface ProjectStats {
+  total: number;
+  recommended: number;
+  in_progress: number;
+  completed: number;
+}
+
+export interface ResumeSkillItem {
+  skill_name: string;
+  skill_id: string | null;
+  context: string;
+}
+
+export interface ResumeExtraction {
+  skills: string[];
+  projects: string[];
+  experience: string[];
+  education: string[];
+  certifications: string[];
+  technologies: string[];
+  tools: string[];
+}
+
+export interface ResumeUploadResult {
+  resume_id: string;
+  filename: string;
+  extraction: ResumeExtraction;
+  matched_skills: ResumeSkillItem[];
+  evidence_created: number;
+  message: string;
+}
+
+export interface ResumeDetail {
+  id: string;
+  filename: string;
+  extraction: ResumeExtraction;
+  matched_skills: ResumeSkillItem[];
+  extracted_at: string;
+  created_at: string;
+}
+
+export interface JobSkillMatch {
+  skill_name: string;
+  status: "strong" | "developing" | "missing" | "not_demonstrated";
+  user_proficiency: number;
+  confidence: string | null;
+  evidence_count: number;
+  is_required: boolean;
+}
+
+export interface JobMatchResult {
+  analysis_id: string;
+  job_title: string;
+  alignment_percentage: number;
+  strong_skills: JobSkillMatch[];
+  developing_skills: JobSkillMatch[];
+  missing_skills: JobSkillMatch[];
+  not_demonstrated: JobSkillMatch[];
+  top_gap: string | null;
+  next_action: string | null;
+  evidence_created: number;
+  required_skills_count: number;
+  matched_count: number;
+}
+
+export interface JobAnalysisDetail {
+  id: string;
+  job_title: string;
+  raw_text: string;
+  required_skills: string[];
+  preferred_skills: string[];
+  experience_required: string | null;
+  education_required: string | null;
+  responsibilities: string[];
+  technologies: string[];
+  match_result: JobMatchResult | null;
+  created_at: string;
+}
+
+export interface CoachContext {
+  name: string | null;
+  skills_count: number;
+  has_profile: boolean;
+  has_assessment: boolean;
+  selected_career: string | null;
+  career_match_score: number | null;
+  has_roadmap: boolean;
+  roadmap_progress: string | null;
+  projects_completed: number;
+  evidence_count: number;
+  next_best_action: string | null;
+  top_skill_gaps: { skill: string; gap: number }[];
+}
+
+export interface CoachAskResponse {
+  response: string;
+  source: "ai" | "fallback";
+  suggestions: string[];
+  context_used: {
+    skills_count: number;
+    has_career: boolean;
+    has_roadmap: boolean;
+    has_assessment: boolean;
+    projects_completed: number;
+    evidence_count: number;
+  };
 }

@@ -36,13 +36,15 @@ export function getConfidenceColor(confidence: string): string {
 }
 
 export function getDifficultyColor(difficulty: string): string {
-  switch (difficulty) {
-    case "beginner":
+  switch (difficulty?.toUpperCase()) {
+    case "BEGINNER":
       return "bg-emerald-100 text-emerald-700";
-    case "intermediate":
+    case "INTERMEDIATE":
       return "bg-amber-100 text-amber-700";
-    case "advanced":
+    case "ADVANCED":
       return "bg-rose-100 text-rose-700";
+    case "INDUSTRY":
+      return "bg-purple-100 text-purple-700";
     default:
       return "bg-slate-100 text-slate-700";
   }

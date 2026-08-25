@@ -15,6 +15,9 @@ class RoadmapPhaseResponse(BaseModel):
     duration_weeks: Optional[int] = None
     completion_criteria: Optional[list] = None
     status: str = "not_started"
+    adaptation_mode: str = "full"
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -27,6 +30,7 @@ class RoadmapResponse(BaseModel):
     summary: Optional[str] = None
     phases: list[RoadmapPhaseResponse] = []
     created_at: datetime
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

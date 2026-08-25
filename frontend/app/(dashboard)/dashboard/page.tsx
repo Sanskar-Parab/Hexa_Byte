@@ -8,12 +8,14 @@ import { CareerOverview } from "@/components/dashboard/CareerOverview";
 import { SkillGapOverview } from "@/components/dashboard/SkillGapOverview";
 import { WeeklyActions } from "@/components/dashboard/WeeklyActions";
 import { ProgressChart } from "@/components/dashboard/ProgressChart";
+import { NextBestActionCard } from "@/components/dashboard/NextBestAction";
 
 export default function DashboardPage() {
   const { user } = useAuth();
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [recommendations, setRecommendations] = useState<any[]>([]);
   const [selectedCareer, setSelectedCareer] = useState<any>(null);
+  const [skillGaps, setSkillGaps] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -22,22 +24,32 @@ export default function DashboardPage() {
     const loadData = async () => {
       try {
         const [dashData, recs] = await Promise.all([
-          api.getDashboard().catch(() => null),
+          api.getDashboard(storedCareerId || undefined).catch(() => null),
           api.getStoredRecommendations().catch(() => []),
         ]);
         setDashboardData(dashData);
         setRecommendations(recs);
 
+        let activeCareer = null;
         if (storedCareerId) {
           const matched = recs.find((r: any) => String(r.career_id) === String(storedCareerId));
           if (matched) {
-            setSelectedCareer(matched);
+            activeCareer = matched;
           } else {
-            api.getCareerDetail(storedCareerId).then(setSelectedCareer).catch(() => {});
+            activeCareer = await api.getCareerDetail(storedCareerId).catch(() => null);
           }
         } else if (recs.length > 0) {
-          setSelectedCareer(recs[0]);
+          activeCareer = recs[0];
           localStorage.setItem("selectedCareerId", recs[0].career_id);
+        }
+        setSelectedCareer(activeCareer);
+
+        const activeCareerId = activeCareer?.career_id || activeCareer?.id || storedCareerId;
+        if (activeCareerId) {
+          const gapResult = await api.analyzeSkillGap(activeCareerId).catch(() => null);
+          if (gapResult && gapResult.gaps) {
+            setSkillGaps(gapResult.gaps);
+          }
         }
       } catch {
       } finally {
@@ -56,7 +68,9 @@ export default function DashboardPage() {
     );
   }
 
-  const readiness = dashboardData?.readiness_score?.overall || 0;
+  const readiness = dashboardData?.readiness_score?.career_readiness
+    ?? dashboardData?.readiness_score?.overall
+    ?? 0;
   const overallProgress = dashboardData?.overall_progress || 0;
   const targetCareer = selectedCareer?.career_name || selectedCareer?.name || null;
   const matchScore = selectedCareer?.match_score ? Math.round(selectedCareer.match_score * 100) : 0;
@@ -78,7 +92,7 @@ export default function DashboardPage() {
     weeklyActions.push("Get your career recommendations");
   }
 
-  const recentProgress = [
+  const recentProgress = dashboardData?.recent_progress || [
     { date: new Date().toISOString().split("T")[0], skills_mastered: phases.completed || 0, projects_completed: dashboardData?.projects?.completed || 0, assessment_score: Math.round(readiness) },
   ];
 
@@ -90,13 +104,15 @@ export default function DashboardPage() {
         careerReadiness={readiness}
       />
 
+      <NextBestActionCard careerId={selectedCareer?.career_id} />
+
       <div className="grid md:grid-cols-2 gap-6">
         <CareerOverview
           targetCareer={targetCareer}
           matchScore={matchScore}
           readiness={readiness}
         />
-        <SkillGapOverview gaps={selectedCareer?.skill_gaps || []} />
+        <SkillGapOverview gaps={skillGaps.length > 0 ? skillGaps : (selectedCareer?.skill_gaps || [])} />
       </div>
 
       <WeeklyActions actions={weeklyActions} />

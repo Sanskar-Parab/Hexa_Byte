@@ -7,8 +7,8 @@ from app.models.user import User
 from app.models.career import Career, CareerRecommendation
 from app.models.skill import UserSkill, Skill
 from app.models.interest import UserInterest, Interest
-from app.schemas.career import CareerResponse, CareerRecommendationResponse
-from app.services.career_matching import compute_career_recommendations
+from app.schemas.career import CareerResponse, CareerRecommendationResponse, CareerIntelligenceResponse
+from app.services.career_matching import compute_career_recommendations, compute_career_intelligence
 from app.utils.auth import get_current_user
 
 router = APIRouter(prefix="/api/careers", tags=["careers"])
@@ -66,6 +66,8 @@ def get_recommendations(
             why_it_matches=db_obj.why_matches,
             strengths=db_obj.strengths,
             skill_gaps=db_obj.missing_skills,
+            biggest_blocker=rec.get("biggest_blocker"),
+            recommended_action=rec.get("recommended_action"),
             created_at=db_obj.created_at,
         ))
 
@@ -94,6 +96,8 @@ def get_stored_recommendations(
             why_it_matches=rec.why_matches,
             strengths=rec.strengths,
             skill_gaps=rec.missing_skills,
+            biggest_blocker=None,
+            recommended_action=None,
             created_at=rec.created_at,
         ))
     return results
@@ -105,3 +109,15 @@ def get_career(career_id: UUID, db: Session = Depends(get_db)):
     if not career:
         raise HTTPException(status_code=404, detail="Career not found")
     return career
+
+
+@router.get("/{career_id}/intelligence", response_model=CareerIntelligenceResponse)
+def get_career_intelligence(
+    career_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    result = compute_career_intelligence(db, current_user, career_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Career not found")
+    return result

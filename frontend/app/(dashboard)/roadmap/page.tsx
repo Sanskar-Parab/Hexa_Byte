@@ -37,7 +37,9 @@ export default function RoadmapPage() {
           ),
         };
       });
-    } catch {}
+    } catch (err) {
+      console.error("Failed to update phase status:", err);
+    }
   };
 
   if (loading) {
@@ -71,8 +73,12 @@ export default function RoadmapPage() {
     );
   }
 
-  const completedPhases = roadmap.phases.filter((p) => p.status === "completed").length;
-  const progress = Math.round((completedPhases / roadmap.phases.length) * 100);
+  const includedPhases = roadmap.phases.filter((p) => p.adaptation_mode !== "skipped");
+  const completedPhases = includedPhases.filter((p) => p.status === "completed").length;
+  const skippedCount = roadmap.phases.filter((p) => p.adaptation_mode === "skipped").length;
+  const progress = includedPhases.length > 0
+    ? Math.round((completedPhases / includedPhases.length) * 100)
+    : 0;
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -90,7 +96,14 @@ export default function RoadmapPage() {
         <CardContent className="p-4 flex items-center justify-between">
           <div>
             <p className="text-sm text-slate-600">Progress</p>
-            <p className="text-lg font-bold text-slate-900">{completedPhases}/{roadmap.phases.length} phases</p>
+            <p className="text-lg font-bold text-slate-900">
+              {completedPhases}/{includedPhases.length} phases
+              {skippedCount > 0 && (
+                <span className="text-sm font-normal text-slate-500 ml-2">
+                  ({skippedCount} skipped)
+                </span>
+              )}
+            </p>
           </div>
           <div className="text-right">
             <p className="text-2xl font-bold text-blue-600">{progress}%</p>

@@ -15,6 +15,8 @@ interface CareerCardProps {
     why_it_matches?: string[];
     strengths?: string[];
     skill_gaps?: string[];
+    biggest_blocker?: string | null;
+    recommended_action?: string | null;
   };
   onSelect: (id: string) => void;
 }

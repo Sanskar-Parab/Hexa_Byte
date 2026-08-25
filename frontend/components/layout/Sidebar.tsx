@@ -11,6 +11,8 @@ import {
   BarChart3,
   Settings,
   Compass,
+  FileText,
+  ClipboardCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
@@ -23,6 +25,8 @@ const links = [
   { href: "/skills", label: "My Skills", icon: Compass },
   { href: "/roadmap", label: "Roadmap", icon: Map },
   { href: "/projects", label: "Projects", icon: FolderKanban },
+  { href: "/resume", label: "Resume", icon: FileText },
+  { href: "/job-analyzer", label: "Job Match", icon: ClipboardCheck },
   { href: "/coach", label: "AI Coach", icon: MessageSquare },
 ];
 

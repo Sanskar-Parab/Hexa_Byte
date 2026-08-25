@@ -7,6 +7,7 @@ from app.models.profile import Profile
 from app.models.skill import Skill, UserSkill
 from app.models.interest import Interest, UserInterest
 from app.schemas.profile import ProfileCreate, ProfileResponse, OnboardingData
+from app.services.evidence_service import create_manual_evidence
 from app.utils.auth import get_current_user
 
 router = APIRouter(prefix="/api/profile", tags=["profile"])
@@ -59,6 +60,7 @@ def complete_onboarding(
         db.add(profile)
     db.flush()
 
+    level_names = {1: "Beginner", 2: "Basic", 3: "Intermediate", 4: "Advanced", 5: "Expert"}
     for skill_data in onboarding_data.skills:
         skill_name = skill_data.get("name", "")
         proficiency = skill_data.get("proficiency", 3)
@@ -70,8 +72,22 @@ def complete_onboarding(
             ).first()
             if existing_us:
                 existing_us.proficiency = proficiency
+                existing_us.level_name = level_names.get(proficiency)
             else:
-                db.add(UserSkill(user_id=current_user.id, skill_id=skill.id, proficiency=proficiency))
+                us = UserSkill(
+                    user_id=current_user.id,
+                    skill_id=skill.id,
+                    proficiency=proficiency,
+                    level_name=level_names.get(proficiency),
+                )
+                db.add(us)
+            db.flush()
+            create_manual_evidence(
+                db=db,
+                user_id=current_user.id,
+                skill_id=skill.id,
+                proficiency=proficiency,
+            )
 
     for interest_name in onboarding_data.interests:
         interest = db.query(Interest).filter(Interest.name == interest_name).first()

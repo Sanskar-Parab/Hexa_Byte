@@ -26,7 +26,35 @@ def _make_mock_career(required_skills, optional_skills=None, skill_importance=No
     c.required_skills = required_skills
     c.optional_skills = optional_skills or []
     c.skill_importance = skill_importance or {}
+    c.name = "TestCareer"
     return c
+
+
+def _make_db(user_skills, all_skills, career):
+    """Create a properly mocked db that handles both filtered and unfiltered queries."""
+    db = MagicMock()
+
+    user_skill_query = MagicMock()
+    user_skill_query.filter.return_value.all.return_value = user_skills
+
+    skill_query = MagicMock()
+    skill_query.all.return_value = all_skills
+
+    career_query = MagicMock()
+    career_query.filter.return_value.first.return_value = career
+
+    def query_side_effect(model):
+        name = getattr(model, "__name__", str(model))
+        if name == "UserSkill":
+            return user_skill_query
+        elif name == "Skill":
+            return skill_query
+        elif name == "Career":
+            return career_query
+        return MagicMock()
+
+    db.query.side_effect = query_side_effect
+    return db
 
 
 class TestSkillGapAnalysis:
@@ -35,13 +63,7 @@ class TestSkillGapAnalysis:
         skill2 = _make_mock_skill("JavaScript")
         user_skills = [_make_mock_user_skill(skill1, 5), _make_mock_user_skill(skill2, 4)]
         career = _make_mock_career(["Python", "JavaScript"])
-
-        db = MagicMock()
-        db.query.return_value.filter.return_value.first.return_value = career
-        db.query.return_value.filter.return_value.all.side_effect = [
-            user_skills,  # UserSkill query
-            [skill1, skill2],  # Skill query
-        ]
+        db = _make_db(user_skills, [skill1, skill2], career)
 
         result = analyze_skill_gaps(db, uuid4(), career.id)
         assert result["overall_gap_score"] < 1.0
@@ -50,13 +72,7 @@ class TestSkillGapAnalysis:
         skill1 = _make_mock_skill("Python")
         user_skills = [_make_mock_user_skill(skill1, 3)]
         career = _make_mock_career(["React", "Node.js"])
-
-        db = MagicMock()
-        db.query.return_value.filter.return_value.first.return_value = career
-        db.query.return_value.filter.return_value.all.side_effect = [
-            user_skills,
-            [skill1],
-        ]
+        db = _make_db(user_skills, [skill1], career)
 
         result = analyze_skill_gaps(db, uuid4(), career.id)
         assert result["overall_gap_score"] > 2.0
@@ -68,13 +84,7 @@ class TestSkillGapAnalysis:
             ["Python"],
             skill_importance={"Python": 1.0},
         )
-
-        db = MagicMock()
-        db.query.return_value.filter.return_value.first.return_value = career
-        db.query.return_value.filter.return_value.all.side_effect = [
-            user_skills,
-            [skill1],
-        ]
+        db = _make_db(user_skills, [skill1], career)
 
         result = analyze_skill_gaps(db, uuid4(), career.id)
         assert len(result["high_priority"]) == 1
@@ -84,13 +94,7 @@ class TestSkillGapAnalysis:
         skill1 = _make_mock_skill("Python")
         user_skills = [_make_mock_user_skill(skill1, 3)]
         career = _make_mock_career(["Python"])
-
-        db = MagicMock()
-        db.query.return_value.filter.return_value.first.return_value = career
-        db.query.return_value.filter.return_value.all.side_effect = [
-            user_skills,
-            [skill1],
-        ]
+        db = _make_db(user_skills, [skill1], career)
 
         result = analyze_skill_gaps(db, uuid4(), career.id)
         assert len(result["medium_priority"]) == 1
@@ -100,13 +104,7 @@ class TestSkillGapAnalysis:
         skill1 = _make_mock_skill("Python")
         user_skills = [_make_mock_user_skill(skill1, 5)]
         career = _make_mock_career(["Python"])
-
-        db = MagicMock()
-        db.query.return_value.filter.return_value.first.return_value = career
-        db.query.return_value.filter.return_value.all.side_effect = [
-            user_skills,
-            [skill1],
-        ]
+        db = _make_db(user_skills, [skill1], career)
 
         result = analyze_skill_gaps(db, uuid4(), career.id)
         assert len(result["low_priority"]) == 1
@@ -116,13 +114,7 @@ class TestSkillGapAnalysis:
         skill1 = _make_mock_skill("Python")
         user_skills = [_make_mock_user_skill(skill1, 2)]
         career = _make_mock_career(["Python"])
-
-        db = MagicMock()
-        db.query.return_value.filter.return_value.first.return_value = career
-        db.query.return_value.filter.return_value.all.side_effect = [
-            user_skills,
-            [skill1],
-        ]
+        db = _make_db(user_skills, [skill1], career)
 
         result = analyze_skill_gaps(db, uuid4(), career.id)
         gap = result["gaps"][0]
@@ -141,13 +133,7 @@ class TestSkillGapAnalysis:
             ["Python", "JavaScript"],
             skill_importance={"Python": 1.0, "JavaScript": 0.5},
         )
-
-        db = MagicMock()
-        db.query.return_value.filter.return_value.first.return_value = career
-        db.query.return_value.filter.return_value.all.side_effect = [
-            user_skills,
-            [skill1, skill2],
-        ]
+        db = _make_db(user_skills, [skill1, skill2], career)
 
         result = analyze_skill_gaps(db, uuid4(), career.id)
         assert result["gaps"][0]["priority_score"] > result["gaps"][1]["priority_score"]
@@ -160,13 +146,7 @@ class TestSkillGapAnalysis:
             required_skills=["Python"],
             optional_skills=["Docker"],
         )
-
-        db = MagicMock()
-        db.query.return_value.filter.return_value.first.return_value = career
-        db.query.return_value.filter.return_value.all.side_effect = [
-            user_skills,
-            [skill1, skill2],
-        ]
+        db = _make_db(user_skills, [skill1, skill2], career)
 
         result = analyze_skill_gaps(db, uuid4(), career.id)
         gap_skills = [g["skill"] for g in result["gaps"]]
@@ -185,13 +165,7 @@ class TestSkillGapAnalysis:
         skill3 = _make_mock_skill("React")
         user_skills = [_make_mock_user_skill(skill1, 1)]
         career = _make_mock_career(["Python", "JavaScript", "React"])
-
-        db = MagicMock()
-        db.query.return_value.filter.return_value.first.return_value = career
-        db.query.return_value.filter.return_value.all.side_effect = [
-            user_skills,
-            [skill1, skill2, skill3],
-        ]
+        db = _make_db(user_skills, [skill1, skill2, skill3], career)
 
         result = analyze_skill_gaps(db, uuid4(), career.id)
         total = result["summary"]["high_count"] + result["summary"]["medium_count"] + result["summary"]["low_count"]

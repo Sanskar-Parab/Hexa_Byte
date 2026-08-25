@@ -10,6 +10,7 @@ from app.models.assessment import AssessmentQuestion, UserAssessment
 from app.models.career import Career, CareerRecommendation
 from app.models.roadmap import Roadmap, RoadmapPhase
 from app.models.project import Project, RecommendedProject
+from app.services.evidence_service import create_manual_evidence
 from app.utils.auth import create_access_token, get_password_hash
 
 router = APIRouter(prefix="/api/demo", tags=["demo"])
@@ -49,10 +50,25 @@ def load_demo_data(db: Session = Depends(get_db)):
         "SQL": 3, "Git": 3, "Data Structures": 3, "Algorithms": 2,
         "Machine Learning": 1, "Docker": 1, "AWS": 1, "Node.js": 2,
     }
+    level_names = {1: "Beginner", 2: "Basic", 3: "Intermediate", 4: "Advanced", 5: "Expert"}
     for name, prof in demo_skills.items():
         skill = db.query(Skill).filter(Skill.name == name).first()
         if skill:
-            db.add(UserSkill(user_id=demo_user.id, skill_id=skill.id, proficiency=prof))
+            us = UserSkill(
+                user_id=demo_user.id,
+                skill_id=skill.id,
+                proficiency=prof,
+                level_name=level_names.get(prof),
+                confidence="LOW",
+            )
+            db.add(us)
+            db.flush()
+            create_manual_evidence(
+                db=db,
+                user_id=demo_user.id,
+                skill_id=skill.id,
+                proficiency=prof,
+            )
 
     demo_interests = ["Technology", "Problem Solving", "Data Analysis", "Innovation"]
     for name in demo_interests:

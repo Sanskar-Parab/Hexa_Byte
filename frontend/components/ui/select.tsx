@@ -33,14 +33,15 @@ const SelectContent = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
 >(({ className, children, position = "popper", ...props }, ref) => (
-  <SelectPrimitive.Portal>
+    <SelectPrimitive.Portal>
     <SelectPrimitive.Content
       ref={ref}
       className={cn(
-        "relative z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md animate-in fade-in-80",
+        "relative z-[9999] min-w-[8rem] overflow-hidden rounded-md border bg-white text-popover-foreground shadow-md",
         position === "popper" && "translate-y-1",
         className
       )}
+      style={{ backgroundColor: "hsl(0, 0%, 100%)", zIndex: 9999 }}
       position={position}
       {...props}
     >

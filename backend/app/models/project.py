@@ -34,3 +34,26 @@ class RecommendedProject(Base):
     user = relationship("User", back_populates="recommended_projects")
     project = relationship("Project", back_populates="recommended")
     career = relationship("Career")
+
+
+class AIGeneratedProject(Base):
+    __tablename__ = "ai_generated_projects"
+
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False)
+    career_id = Column(GUID(), ForeignKey("careers.id"), nullable=False)
+    title = Column(String, nullable=False)
+    description = Column(Text)
+    difficulty = Column(String)
+    why_this_project = Column(Text)
+    skills_practiced = Column(JSON)
+    skills_targeted = Column(JSON)
+    duration = Column(String)
+    learning_objectives = Column(JSON)
+    deliverables = Column(JSON)
+    completion_criteria = Column(JSON)
+    status = Column(String, default="recommended")  # recommended, in_progress, completed
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="ai_generated_projects")
+    career = relationship("Career")

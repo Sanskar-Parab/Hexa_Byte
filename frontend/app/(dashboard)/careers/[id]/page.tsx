@@ -13,6 +13,7 @@ export default function CareerDetailPage() {
   const careerId = params.id as string;
   const [recommendation, setRecommendation] = useState<any>(null);
   const [careerInfo, setCareerInfo] = useState<any>(null);
+  const [intelligence, setIntelligence] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,11 +29,13 @@ export default function CareerDetailPage() {
     Promise.all([
       api.getStoredRecommendations().catch(() => []),
       api.getCareerDetail(careerId).catch(() => null),
+      api.getCareerIntelligence(careerId).catch(() => null),
     ])
-      .then(([recs, info]) => {
+      .then(([recs, info, intel]) => {
         const found = recs.find((r: any) => String(r.career_id) === String(careerId));
         setRecommendation(found || null);
         setCareerInfo(info);
+        setIntelligence(intel);
       })
       .catch(() => {
         setError("Unable to load career details. Please try again.");
@@ -91,7 +94,14 @@ export default function CareerDetailPage() {
     why_it_matches: [],
     strengths: [],
     skill_gaps: [],
+    biggest_blocker: intelligence?.biggest_blocker || null,
+    recommended_action: intelligence?.recommended_action || null,
   };
+
+  if (intelligence) {
+    displayRecommendation.biggest_blocker = intelligence.biggest_blocker;
+    displayRecommendation.recommended_action = intelligence.recommended_action;
+  }
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -99,7 +109,11 @@ export default function CareerDetailPage() {
         <ArrowLeft className="mr-2 h-4 w-4" /> Back to Careers
       </Button>
 
-      <CareerDetail career={displayRecommendation} careerInfo={careerInfo} />
+      <CareerDetail
+        career={displayRecommendation}
+        careerInfo={careerInfo || intelligence}
+        intelligence={intelligence}
+      />
 
       <div className="flex gap-3">
         <Button onClick={handleGenerateRoadmap} disabled={generating}>

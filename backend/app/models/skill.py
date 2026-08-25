@@ -27,7 +27,10 @@ class UserSkill(Base):
     user_id = Column(GUID(), ForeignKey("users.id"), nullable=False)
     skill_id = Column(GUID(), ForeignKey("skills.id"), nullable=False)
     proficiency = Column(Integer, nullable=False)  # 1-5
+    level_name = Column(String, nullable=True)  # Beginner, Basic, Intermediate, Advanced, Expert
+    confidence = Column(String, nullable=True, default="LOW")  # HIGH, MEDIUM, LOW
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     user = relationship("User", back_populates="skills")
     skill = relationship("Skill", back_populates="user_skills")

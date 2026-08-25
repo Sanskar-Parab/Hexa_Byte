@@ -9,6 +9,13 @@ from app.services.career_matching import (
     _compute_interest_score,
     _compute_assessment_score,
     _compute_experience_score,
+    _build_why_matches,
+    _build_strengths,
+    _build_missing_skills,
+    _build_biggest_blocker,
+    _build_recommended_action,
+    _build_skill_details,
+    _build_user_current_skills,
     WEIGHTS,
 )
 
@@ -20,10 +27,11 @@ def _make_mock_skill(name, skill_id=None):
     return s
 
 
-def _make_mock_user_skill(skill, proficiency):
+def _make_mock_user_skill(skill, proficiency, confidence="LOW"):
     us = MagicMock()
     us.skill_id = skill.id
     us.proficiency = proficiency
+    us.confidence = confidence
     return us
 
 
@@ -113,7 +121,9 @@ class TestSkillScore:
         all_skills = {skill1.id: skill1, skill2.id: skill2}
 
         score = _compute_skill_score(user_skills, career, all_skills)
-        assert score > 0.8  # Python dominates due to higher weight
+        # Python (weight=1.0, proficiency=5) + JavaScript (weight=0.5, proficiency=1)
+        # = (1.0*1.0 + 0.2*0.5) / (1.0 + 0.5) = 1.1/1.5 = 0.733
+        assert score > 0.7
 
     def test_empty_required_skills(self):
         career = _make_mock_career("Dev", [])
@@ -211,3 +221,209 @@ class TestWeightConfiguration:
     def test_weights_sum_to_one(self):
         total = sum(WEIGHTS.values())
         assert abs(total - 1.0) < 0.001
+
+
+class TestBiggestBlocker:
+    def test_identifies_highest_priority_gap(self):
+        skill1 = _make_mock_skill("Python")
+        skill2 = _make_mock_skill("Machine Learning")
+        user_skills = [_make_mock_user_skill(skill1, 4)]
+        career = _make_mock_career(
+            "Data Scientist",
+            ["Python", "Machine Learning"],
+            skill_importance={"Python": 0.95, "Machine Learning": 0.9},
+        )
+        all_skills = {skill1.id: skill1, skill2.id: skill2}
+
+        blocker = _build_biggest_blocker(user_skills, career, all_skills)
+        assert blocker is not None
+        assert "Machine Learning" in blocker
+
+    def test_no_gaps_returns_none(self):
+        skill1 = _make_mock_skill("Python")
+        skill2 = _make_mock_skill("JavaScript")
+        user_skills = [
+            _make_mock_user_skill(skill1, 5),
+            _make_mock_user_skill(skill2, 5),
+        ]
+        career = _make_mock_career("Dev", ["Python", "JavaScript"])
+        all_skills = {skill1.id: skill1, skill2.id: skill2}
+
+        blocker = _build_biggest_blocker(user_skills, career, all_skills)
+        assert blocker is None
+
+    def test_empty_required_skills(self):
+        career = _make_mock_career("Dev", [])
+        blocker = _build_biggest_blocker([], career, {})
+        assert blocker is None
+
+
+class TestRecommendedAction:
+    def test_returns_first_learning_phase(self):
+        skill1 = _make_mock_skill("Machine Learning")
+        user_skills = [_make_mock_user_skill(skill1, 1)]
+        career = _make_mock_career(
+            "Data Scientist",
+            ["Machine Learning"],
+            skill_importance={"Machine Learning": 0.9},
+        )
+        career.learning_sequence = [
+            {"title": "ML Basics", "skills": ["Machine Learning"], "objective": "Learn ML"},
+            {"title": "Advanced ML", "skills": ["Deep Learning"], "objective": "Master ML"},
+        ]
+        all_skills = {skill1.id: skill1}
+
+        action = _build_recommended_action(user_skills, career, all_skills)
+        assert "ML Basics" in action
+
+    def test_fallback_without_learning_sequence(self):
+        skill1 = _make_mock_skill("React Native")
+        user_skills = []
+        career = _make_mock_career(
+            "Mobile Developer",
+            ["React Native"],
+            skill_importance={"React Native": 0.9},
+        )
+        career.learning_sequence = []
+        all_skills = {skill1.id: skill1}
+
+        action = _build_recommended_action(user_skills, career, all_skills)
+        assert "React Native" in action
+
+    def test_no_gaps_message(self):
+        skill1 = _make_mock_skill("Python")
+        user_skills = [_make_mock_user_skill(skill1, 5)]
+        career = _make_mock_career("Dev", ["Python"])
+        all_skills = {skill1.id: skill1}
+
+        action = _build_recommended_action(user_skills, career, all_skills)
+        assert "all required skills" in action.lower() or "practical experience" in action.lower()
+
+
+class TestEnhancedWhyMatches:
+    def test_includes_strong_proficiency(self):
+        skill1 = _make_mock_skill("Python")
+        user_skills = [_make_mock_user_skill(skill1, 5)]
+        career = _make_mock_career("Data Scientist", ["Python", "Machine Learning"])
+        all_skills = {skill1.id: skill1}
+
+        reasons = _build_why_matches(user_skills, career, all_skills)
+        assert any("strong proficiency" in r.lower() for r in reasons)
+
+    def test_includes_category_alignment(self):
+        career = _make_mock_career("Dev", ["Python"], category="Software Development")
+        reasons = _build_why_matches([], career, {})
+        assert any("software development" in r.lower() for r in reasons)
+
+    def test_includes_assessment_aptitude(self):
+        skill1 = _make_mock_skill("Python")
+        user_skills = [_make_mock_user_skill(skill1, 5)]
+        career = _make_mock_career("Dev", ["Python"])
+        all_skills = {skill1.id: skill1}
+
+        reasons = _build_why_matches(user_skills, career, all_skills, assessment_score=0.8)
+        assert any("assessment" in r.lower() for r in reasons)
+
+
+class TestEnhancedStrengths:
+    def test_sorted_by_weighted_proficiency(self):
+        skill1 = _make_mock_skill("Python")
+        skill2 = _make_mock_skill("JavaScript")
+        user_skills = [
+            _make_mock_user_skill(skill1, 4),
+            _make_mock_user_skill(skill2, 5),
+        ]
+        career = _make_mock_career(
+            "Dev",
+            ["Python", "JavaScript"],
+            skill_importance={"Python": 1.0, "JavaScript": 0.5},
+        )
+        all_skills = {skill1.id: skill1, skill2.id: skill2}
+
+        strengths = _build_strengths(user_skills, career, all_skills)
+        assert len(strengths) == 2
+        assert "Python" in strengths[0]
+
+    def test_includes_level_name(self):
+        skill1 = _make_mock_skill("Python")
+        user_skills = [_make_mock_user_skill(skill1, 4)]
+        career = _make_mock_career("Dev", ["Python"])
+        all_skills = {skill1.id: skill1}
+
+        strengths = _build_strengths(user_skills, career, all_skills)
+        assert len(strengths) == 1
+        assert "Advanced" in strengths[0]
+
+
+class TestSkillDetails:
+    def test_computes_gap_and_status(self):
+        skill1 = _make_mock_skill("Python")
+        skill2 = _make_mock_skill("Machine Learning")
+        user_skills = [
+            _make_mock_user_skill(skill1, 4, "HIGH"),
+            _make_mock_user_skill(skill2, 1, "LOW"),
+        ]
+        career = _make_mock_career(
+            "Data Scientist",
+            ["Python", "Machine Learning"],
+            skill_importance={"Python": 0.95, "Machine Learning": 0.9},
+        )
+        all_skills = {skill1.id: skill1, skill2.id: skill2}
+
+        details = _build_skill_details(user_skills, career, all_skills)
+        assert len(details) == 2
+
+        python_detail = next(d for d in details if d["skill_name"] == "Python")
+        assert python_detail["gap"] == 1
+        assert python_detail["status"] == "strong"
+        assert python_detail["evidence_confidence"] == "HIGH"
+
+        ml_detail = next(d for d in details if d["skill_name"] == "Machine Learning")
+        assert ml_detail["gap"] == 4
+        assert ml_detail["status"] == "gap"
+        assert ml_detail["evidence_confidence"] == "LOW"
+
+    def test_missing_skill_zero_proficiency(self):
+        skill1 = _make_mock_skill("Python")
+        user_skills = [_make_mock_user_skill(skill1, 5)]
+        career = _make_mock_career("Dev", ["Python", "React"])
+        all_skills = {skill1.id: skill1}
+
+        details = _build_skill_details(user_skills, career, all_skills)
+        react_detail = next(d for d in details if d["skill_name"] == "React")
+        assert react_detail["user_proficiency"] == 0
+        assert react_detail["evidence_confidence"] == "LOW"
+        assert react_detail["status"] == "gap"
+
+
+class TestUserCurrentSkills:
+    def test_returns_only_career_skills(self):
+        skill1 = _make_mock_skill("Python")
+        skill2 = _make_mock_skill("Cooking")
+        user_skills = [
+            _make_mock_user_skill(skill1, 4, "HIGH"),
+            _make_mock_user_skill(skill2, 5, "HIGH"),
+        ]
+        career = _make_mock_career("Dev", ["Python"])
+        all_skills = {skill1.id: skill1, skill2.id: skill2}
+
+        current = _build_user_current_skills(user_skills, career, all_skills)
+        assert len(current) == 1
+        assert current[0]["name"] == "Python"
+        assert current[0]["proficiency"] == "4"
+        assert current[0]["confidence"] == "HIGH"
+
+    def test_sorted_by_proficiency(self):
+        skill1 = _make_mock_skill("Python")
+        skill2 = _make_mock_skill("JavaScript")
+        user_skills = [
+            _make_mock_user_skill(skill1, 3, "MEDIUM"),
+            _make_mock_user_skill(skill2, 5, "HIGH"),
+        ]
+        career = _make_mock_career("Dev", ["Python", "JavaScript"])
+        all_skills = {skill1.id: skill1, skill2.id: skill2}
+
+        current = _build_user_current_skills(user_skills, career, all_skills)
+        assert len(current) == 2
+        assert current[0]["name"] == "JavaScript"
+        assert current[1]["name"] == "Python"

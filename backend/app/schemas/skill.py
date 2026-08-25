@@ -33,6 +33,8 @@ class UserSkillResponse(BaseModel):
     skill_id: UUID
     skill_name: Optional[str] = None
     proficiency: int
+    level_name: Optional[str] = None
+    confidence: Optional[str] = None
     created_at: datetime
 
     class Config:

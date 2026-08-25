@@ -17,13 +17,13 @@ def analyze_skill_gaps(
         return {"error": "Career not found"}
 
     user_skills = db.query(UserSkill).filter(UserSkill.user_id == user_id).all()
-    all_skills = {s.name: s for s in db.query(Skill).all()}
+    all_skills_list = db.query(Skill).all()
+    all_skills = {s.name: s for s in all_skills_list}
+    all_skills_by_id = {s.id: s for s in all_skills_list}
 
     user_skill_map: dict[str, int] = {}
     for us in user_skills:
-        skill = all_skills.get(
-            next((sn for sn, s in all_skills.items() if s.id == us.skill_id), None)
-        )
+        skill = all_skills_by_id.get(us.skill_id)
         if skill:
             user_skill_map[skill.name] = us.proficiency
 

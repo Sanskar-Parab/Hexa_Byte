@@ -13,22 +13,27 @@ interface Message {
 }
 
 interface ChatInterfaceProps {
-  onAsk: (question: string, context?: string) => Promise<{ response: string; suggestions: string[] }>;
+  onAsk: (question: string, context?: string) => Promise<{
+    response: string;
+    suggestions: string[];
+  }>;
+  contextAware?: boolean;
 }
 
-const quickQuestions = [
-  "What skills should I learn first?",
-  "How long will it take to become a data scientist?",
-  "What projects should I build?",
-  "How do I transition from my current role?",
+const defaultQuickQuestions = [
+  "What should I learn next?",
+  "What's my biggest skill gap?",
+  "How am I progressing?",
+  "What project should I build?",
 ];
 
-export function ChatInterface({ onAsk }: ChatInterfaceProps) {
+export function ChatInterface({ onAsk, contextAware = true }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: "Hi! I'm your AI Career Coach. Ask me anything about your career path, skills, or learning strategy.",
-      suggestions: quickQuestions,
+      content:
+        "Hi! I'm your AI Career Coach. I use your actual skill data, career goals, and roadmap to give you personalized guidance. Ask me anything about your career path.",
+      suggestions: defaultQuickQuestions,
     },
   ]);
   const [input, setInput] = useState("");
@@ -51,12 +56,20 @@ export function ChatInterface({ onAsk }: ChatInterfaceProps) {
       const result = await onAsk(q);
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: result.response, suggestions: result.suggestions },
+        {
+          role: "assistant",
+          content: result.response,
+          suggestions: result.suggestions,
+        },
       ]);
     } catch {
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: "Sorry, I couldn't process that. Please try again." },
+        {
+          role: "assistant",
+          content:
+            "Sorry, I couldn't process that. Please try again.",
+        },
       ]);
     } finally {
       setLoading(false);
@@ -67,7 +80,13 @@ export function ChatInterface({ onAsk }: ChatInterfaceProps) {
     <div className="flex flex-col h-[calc(100vh-200px)] min-h-[400px]">
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((msg, i) => (
-          <div key={i} className={cn("flex gap-3", msg.role === "user" ? "justify-end" : "")}>
+          <div
+            key={i}
+            className={cn(
+              "flex gap-3",
+              msg.role === "user" ? "justify-end" : ""
+            )}
+          >
             {msg.role === "assistant" && (
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100">
                 <Bot className="h-4 w-4 text-blue-600" />
@@ -81,7 +100,9 @@ export function ChatInterface({ onAsk }: ChatInterfaceProps) {
                   : "bg-slate-100 text-slate-900 rounded-bl-md"
               )}
             >
-              <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+              <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                {msg.content}
+              </p>
               {msg.suggestions && msg.suggestions.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-2">
                   {msg.suggestions.map((s, j) => (
@@ -111,7 +132,9 @@ export function ChatInterface({ onAsk }: ChatInterfaceProps) {
             <div className="bg-slate-100 rounded-2xl rounded-bl-md px-4 py-3">
               <div className="flex items-center gap-1">
                 <Sparkles className="h-4 w-4 text-blue-500 animate-pulse" />
-                <span className="text-sm text-slate-500">Thinking...</span>
+                <span className="text-sm text-slate-500">
+                  Analyzing your data...
+                </span>
               </div>
             </div>
           </div>
