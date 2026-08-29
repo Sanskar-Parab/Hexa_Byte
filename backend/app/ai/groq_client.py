@@ -35,6 +35,18 @@ class SkillAnalysis(BaseModel):
     summary: str
 
 
+class OpportunityAIAnalysis(BaseModel):
+    match_score: int
+    why_match: list[str]
+    strengths: list[str]
+    skill_gaps: list[str]
+    recommendation: str
+
+
+class ExtractedSkills(BaseModel):
+    skills: list[str]
+
+
 QUESTION_GENERATION_PROMPT = """You are a technical skill assessment system. Generate exactly 10 multiple-choice questions to assess a user's proficiency in {skill_name}.
 
 SKILL TO ASSESS: {skill_name}
@@ -98,6 +110,52 @@ Rules:
 - Keep it concise and encouraging
 - Focus on growth areas
 - Return ONLY valid JSON, no other text."""
+
+
+OPPORTUNITY_MATCH_PROMPT = """You are a career-matching analyst. Assess how well a student's demonstrated skills fit a specific job or internship opportunity.
+
+OPPORTUNITY:
+Title: {title}
+Organization: {organization}
+Type: {opp_type}
+Required skills (from the posting): {required_skills}
+Description/context: {description}
+
+STUDENT PROFILE:
+Demonstrated skills (name: proficiency out of 5): {user_skills}
+Target career interest: {target_career}
+
+DETERMINISTIC SKILL MATCH (already computed — treat as ground truth, do not contradict it):
+Matched (proficiency 3+): {matched_skills}
+Partial (proficiency 1-2): {partial_skills}
+Missing: {missing_skills}
+Deterministic score: {deterministic_score}/100
+
+TASK:
+Add contextual reasoning that plain skill-name matching misses — transferable skills, how central each missing skill actually is to this specific role, and relevance to the student's career interest.
+Your match_score MUST stay within 15 points of the deterministic score above unless you have a strong, stated contextual reason to diverge.
+
+Return ONLY valid JSON with this exact structure:
+{{
+  "match_score": 0-100,
+  "why_match": ["short specific reason", "short specific reason"],
+  "strengths": ["skill or trait 1", "skill or trait 2"],
+  "skill_gaps": ["missing skill 1"],
+  "recommendation": "1-2 sentence, encouraging and specific recommendation"
+}}
+
+IMPORTANT: Return ONLY the JSON object. No thinking, no commentary, no markdown fences."""
+
+
+SKILL_EXTRACTION_PROMPT = """Extract the likely technical and professional skills required for this job/internship opportunity, based ONLY on the text provided. Do not invent skills the text doesn't imply. Return at most 10 skills, most important first.
+
+TEXT:
+{text}
+
+Return ONLY valid JSON with this exact structure:
+{{"skills": ["skill1", "skill2"]}}
+
+IMPORTANT: Return ONLY the JSON object. No thinking, no commentary, no markdown fences."""
 
 
 def _strip_thinking_tags(content: str) -> str:
@@ -428,6 +486,126 @@ class GroqAIClient:
                     break
 
         return None, last_error or "AI failed to generate a coaching response after multiple attempts."
+
+    def analyze_opportunity_match(
+        self,
+        title: str,
+        organization: str,
+        opp_type: str,
+        required_skills: list[str],
+        description: str,
+        user_skills: dict[str, int],
+        target_career: Optional[str],
+        deterministic_result: dict,
+    ) -> tuple[Optional[OpportunityAIAnalysis], Optional[str]]:
+        """Contextual reasoning layer on top of the deterministic skill match.
+
+        Used only for the top candidate opportunities (see
+        app.services.opportunity_recommendation) — not called per skill, and
+        not called for every opportunity, to keep AI usage bounded.
+        """
+        if not self.is_available:
+            return None, self._error_message or "AI service not available"
+
+        prompt = OPPORTUNITY_MATCH_PROMPT.format(
+            title=(title or "")[:200],
+            organization=(organization or "")[:120],
+            opp_type=opp_type,
+            required_skills=", ".join(required_skills[:20]) or "Not specified",
+            description=(description or "")[:1200],
+            user_skills=", ".join(f"{k}: {v}/5" for k, v in list(user_skills.items())[:30]) or "None listed",
+            target_career=target_career or "Not specified",
+            matched_skills=", ".join(s["skill"] for s in deterministic_result.get("matched_skills", [])) or "None",
+            partial_skills=", ".join(s["skill"] for s in deterministic_result.get("partial_skills", [])) or "None",
+            missing_skills=", ".join(deterministic_result.get("missing_skills", [])) or "None",
+            deterministic_score=deterministic_result.get("match_score", 0),
+        )
+
+        candidate_models = self._get_candidate_models()
+        last_error = None
+
+        for model in candidate_models:
+            for attempt in range(2):
+                try:
+                    response = self._client.chat.completions.create(
+                        model=model,
+                        messages=[
+                            {"role": "system", "content": "Return ONLY valid JSON. No thinking, no commentary, no markdown."},
+                            {"role": "user", "content": prompt},
+                        ],
+                        temperature=0.4,
+                        max_tokens=700,
+                        timeout=20,
+                    )
+
+                    content = response.choices[0].message.content
+                    if not content:
+                        continue
+
+                    data = _extract_json_from_response(content)
+                    if data is None:
+                        continue
+
+                    validated = OpportunityAIAnalysis(
+                        match_score=int(data.get("match_score", deterministic_result.get("match_score", 0)) or 0),
+                        why_match=[str(x) for x in (data.get("why_match") or [])][:5],
+                        strengths=[str(x) for x in (data.get("strengths") or [])][:5],
+                        skill_gaps=[str(x) for x in (data.get("skill_gaps") or [])][:5],
+                        recommendation=str(data.get("recommendation") or ""),
+                    )
+                    return validated, None
+
+                except ValidationError as e:
+                    logger.warning(f"Opportunity match validation failed on model {model}: {e}")
+                    last_error = "AI response validation failed."
+                except Exception as e:
+                    logger.error(f"Groq opportunity match error on model {model} attempt {attempt + 1}: {type(e).__name__}: {e}")
+                    last_error = f"AI service error: {type(e).__name__}"
+                    break
+
+        return None, last_error or "AI failed to analyze this opportunity after multiple attempts."
+
+    def extract_skills_from_text(self, text: str) -> tuple[Optional[list[str]], Optional[str]]:
+        """Fallback skill extraction for opportunities with no structured
+        required_skills field — used sparingly (Phase 6), never for postings
+        that already list required skills."""
+        if not self.is_available:
+            return None, self._error_message or "AI service not available"
+
+        prompt = SKILL_EXTRACTION_PROMPT.format(text=(text or "")[:1500])
+        candidate_models = self._get_candidate_models()
+        last_error = None
+
+        for model in candidate_models:
+            try:
+                response = self._client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": "Return ONLY valid JSON. No thinking, no commentary, no markdown."},
+                        {"role": "user", "content": prompt},
+                    ],
+                    temperature=0.3,
+                    max_tokens=300,
+                    timeout=15,
+                )
+                content = response.choices[0].message.content
+                if not content:
+                    continue
+
+                data = _extract_json_from_response(content)
+                if data is None:
+                    continue
+
+                validated = ExtractedSkills(skills=[str(s) for s in (data.get("skills") or [])][:10])
+                return validated.skills, None
+
+            except ValidationError:
+                last_error = "AI response validation failed."
+            except Exception as e:
+                logger.error(f"Groq skill extraction error on model {model}: {type(e).__name__}: {e}")
+                last_error = f"AI service error: {type(e).__name__}"
+
+        return None, last_error or "AI failed to extract skills after multiple attempts."
 
 
 groq_client = GroqAIClient()

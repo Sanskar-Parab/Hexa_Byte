@@ -10,7 +10,7 @@ load_dotenv(backend_dir / ".env")
 
 from app.database.config import engine, Base
 from app.database.migrations import run_migrations
-from app.api import auth, profile, skills, interests, assessment, careers, skill_gap, roadmap, projects, progress, coach, demo, skill_assessment, evidence, next_best_action, resume, job_analysis
+from app.api import auth, profile, skills, interests, assessment, careers, skill_gap, roadmap, projects, progress, coach, demo, skill_assessment, evidence, next_best_action, resume, job_analysis, opportunities
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +45,7 @@ app.include_router(evidence.router)
 app.include_router(next_best_action.router)
 app.include_router(resume.router)
 app.include_router(job_analysis.router)
+app.include_router(opportunities.router)
 
 
 @app.on_event("startup")

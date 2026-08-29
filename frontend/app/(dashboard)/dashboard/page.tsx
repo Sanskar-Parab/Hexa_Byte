@@ -11,6 +11,7 @@ import { SkillGapOverview } from "@/components/dashboard/SkillGapOverview";
 import { WeeklyActions } from "@/components/dashboard/WeeklyActions";
 import { ProgressChart } from "@/components/dashboard/ProgressChart";
 import { NextBestActionCard } from "@/components/dashboard/NextBestAction";
+import { OpportunitiesForYou } from "@/components/dashboard/OpportunitiesForYou";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CardSkeleton, SkeletonBlock } from "@/components/ui/loading-state";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -143,6 +144,8 @@ export default function DashboardPage() {
         />
         <SkillGapOverview gaps={skillGaps.length > 0 ? skillGaps : (selectedCareer?.skill_gaps || [])} />
       </div>
+
+      <OpportunitiesForYou careerId={selectedCareer?.career_id} />
 
       {phases.total > 0 ? (
         <Card>

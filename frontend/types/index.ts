@@ -423,6 +423,49 @@ export interface CoachContext {
   top_skill_gaps: { skill: string; gap: number }[];
 }
 
+export interface OpportunityMatchedSkill {
+  skill: string;
+  user_proficiency: number;
+  requirement: string;
+}
+
+export interface OpportunityRecommendation {
+  id: string;
+  title: string;
+  organization: string;
+  organization_url: string | null;
+  type: "internship" | "job";
+  url: string | null;
+  logo: string | null;
+  location: string | null;
+  remote: boolean | null;
+  work_type: string | null;
+  seniority: string | null;
+  salary: string | null;
+  posted_date: string | null;
+  valid_through: string | null;
+  source: string | null;
+  source_domain: string | null;
+  registration_open: boolean;
+  match_score: number;
+  matched_skills: OpportunityMatchedSkill[];
+  partial_skills: OpportunityMatchedSkill[];
+  missing_skills: string[];
+  why_match: string[];
+  skill_gap_message: string | null;
+  recommendation: string | null;
+}
+
+export interface OpportunityRecommendationsResponse {
+  recommendations: OpportunityRecommendation[];
+  user_skill_summary: {
+    skills_used: string[];
+    skill_count: number;
+  };
+  source_status: "ok" | "unavailable";
+  message: string | null;
+}
+
 export interface CoachAskResponse {
   response: string;
   source: "ai" | "fallback";

@@ -30,6 +30,16 @@ Next Path AI is an AI-powered career guidance platform that analyzes your skills
 - **Job Description Analysis** — Paste job descriptions to analyze skill match and alignment percentage
 - **Skill Matching** — Fuzzy/partial matching (React.js matches React) with strong/developing/missing breakdowns
 
+### Jobs & Internships (AI-Personalized Recommendations)
+- **Live Provider Data** — Real internships and jobs fetched from the RapidAPI "Internships API" provider (Career Site API for internships, Job Board API for jobs), never a local/fake dataset
+- **One Provider Abstraction** — `opportunity_provider.py` is the only module that talks to RapidAPI; the matching/recommendation layer is provider-agnostic, so swapping providers later doesn't touch the matching engine
+- **Skill Normalization Layer** — Deterministic alias resolution (React/React.js/React JS, Node/NodeJS/Node.js, HTML+CSS → HTML/CSS, etc.) so external postings match your skill profile without string-equality guesswork
+- **Weighted Skill Matching** — Match score reflects proficiency, not just skill-name overlap (matched/partial/missing breakdown, each tied to your actual proficiency level)
+- **AI Contextual Analysis** — Groq reasons about transferable skills and role centrality for top candidates only, blended with (never overriding) the deterministic score
+- **Minimal Upstream Calls** — Exactly one provider request per opportunity type per cache window; no role-discovery fan-out, so a low RapidAPI quota isn't exhausted by normal use
+- **Skill-Gap → Roadmap/Project Loop** — Missing skills on a listing link directly to your roadmap and skill-aware project recommendations
+- **Graceful, Partial-Aware Degradation** — RapidAPI outages/rate limits/quota exhaustion never crash the app; if only one opportunity type fails (e.g. jobs down, internships fine) the data that did load is still shown, with a clear message about what's missing
+
 ### Adaptive Systems
 - **Adaptive Roadmaps** — Phases auto-adapt based on proficiency (skip adapted phases, reduce duration for known skills)
 - **Adaptive Event System** — Cascading updates triggered by skill assessments, project completions, resume/job analyses
@@ -78,7 +88,7 @@ Next Path AI is an AI-powered career guidance platform that analyzes your skills
 ## Project Structure
 
 ```
-pathpilot/
+nextpath/
 ├── backend/
 │   ├── app/
 │   │   ├── main.py              # FastAPI entry point
@@ -89,7 +99,7 @@ pathpilot/
 │   │   ├── database/            # DB config, migrations, seed data
 │   │   ├── ai/                  # OpenAI & Groq integration
 │   │   └── utils/               # Auth utilities
-│   ├── tests/                   # 300+ backend tests
+│   ├── tests/                   # 340+ backend tests
 │   └── requirements.txt         # Python dependencies
 │
 └── frontend/
@@ -106,7 +116,8 @@ pathpilot/
     │       ├── projects/        # Project recommendations + detail
     │       ├── coach/           # AI career coach
     │       ├── resume/          # Resume upload & parsing
-    │       └── job-analyzer/    # Job description analysis
+    │       ├── job-analyzer/    # Job description analysis
+    │       └── opportunities/   # AI-personalized jobs & internships (live provider data)
     ├── components/              # Reusable UI components
     │   ├── ui/                  # Base UI primitives (shadcn/ui)
     │   ├── landing/             # Landing page sections
@@ -118,7 +129,8 @@ pathpilot/
     │   ├── projects/            # Project recommendation cards
     │   ├── coach/               # Chat interface
     │   ├── resume/              # Resume uploader & results
-    │   └── job/                 # Job analyzer & match results
+    │   ├── job/                 # Job analyzer & match results
+    │   └── opportunities/       # Opportunity cards (match score, skill gaps, apply)
     ├── hooks/                   # Custom React hooks (useAuth)
     ├── lib/                     # API client (40+ methods) and utilities
     └── types/                   # TypeScript interfaces (438 lines)
@@ -174,10 +186,10 @@ Create a `.env` file in the `backend/` directory:
 
 ```env
 # Database (defaults to SQLite)
-DATABASE_URL=sqlite:///pathpilot.db
+DATABASE_URL=sqlite:///nextpath.db
 
 # For PostgreSQL (production):
-# DATABASE_URL=postgresql://user:password@localhost:5432/pathpilot
+# DATABASE_URL=postgresql://user:password@localhost:5432/nextpath
 
 # JWT Secret (change in production)
 JWT_SECRET=your-secret-key-here
@@ -188,6 +200,22 @@ OPENAI_API_KEY=your-openai-api-key-here
 # Groq API (required for AI-powered skill assessment and project generation)
 GROQ_API_KEY=your-groq-api-key-here
 GROQ_MODEL=openai/gpt-oss-120b
+
+# Opportunity provider (RapidAPI "Internships API") — powers Jobs & Internships
+# recommendations. Career Site API endpoint = internships, Job Board API
+# endpoint = jobs, both on this one RapidAPI product.
+# Without this, the feature degrades gracefully (empty list + "temporarily
+# unavailable" message) instead of breaking the app.
+OPPORTUNITY_RAPIDAPI_KEY=your-rapidapi-key-here
+OPPORTUNITY_RAPIDAPI_HOST=internships-api.p.rapidapi.com
+OPPORTUNITY_CACHE_TTL_SECONDS=900
+OPPORTUNITY_QUOTA_BACKOFF_SECONDS=3600
+
+# Opportunity match scoring weights (deterministic skill score vs AI contextual score)
+OPPORTUNITY_DETERMINISTIC_WEIGHT=0.6
+OPPORTUNITY_AI_WEIGHT=0.4
+OPPORTUNITY_AI_TOP_N=5
+OPPORTUNITY_MAX_SKILL_EXTRACTIONS=20
 ```
 
 > **Note:** The frontend requires no environment variables — API calls are proxied via Next.js rewrites.
@@ -313,6 +341,11 @@ GROQ_MODEL=openai/gpt-oss-120b
 | GET | `/api/job/{id}` | Get specific analysis |
 | DELETE | `/api/job/{id}` | Delete analysis |
 
+### Jobs & Internships (Opportunities)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/opportunities/recommendations` | Personalized job/internship recommendations from live provider data. Query params: `type` (`all`\|`internship`\|`job`), `limit`, `min_match`, `career_id`. User identity always comes from the JWT, never a query param. |
+
 ### Demo
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -338,6 +371,37 @@ GROQ_MODEL=openai/gpt-oss-120b
 9. **Analyze job descriptions** — see your alignment and skill match breakdown
 10. **Chat with AI Coach** — context-aware career coaching with conversation history for follow-ups (e.g., "Why?", "Tell me more"), evidence source transparency, and security hardening
 11. **Take AI skill assessments** — Groq-powered MCQs with proficiency scoring
+12. **Browse Jobs & Internships** — see real opportunities ranked by how well they match your demonstrated skills, with clear reasoning and a direct link to close each gap
+
+---
+
+## Jobs & Internships: How the Matching Pipeline Works
+
+```
+Authenticated user (JWT)
+  → user's demonstrated skills + proficiency (app.services.opportunity_recommendation.get_user_skill_map)
+  → skill normalization (app.services.skill_normalization — aliases, no LLM calls)
+  → live provider data (app.services.opportunity_provider — RapidAPI "Internships API")
+      ├── Career Site API (/active-jb-7d)  -> internships
+      └── Job Board API   (/active-ats-7d) -> jobs
+    (cached, deduped by id/URL, expired postings filtered by date_validthrough)
+  → required-skill extraction (this provider has no explicit skills field on
+    ANY posting, so Groq extracts from title+description; results are cached
+    per posting and capped at OPPORTUNITY_MAX_SKILL_EXTRACTIONS new calls
+    per request so a large result set can't trigger unbounded AI usage)
+  → deterministic weighted skill matching (app.services.opportunity_matching — proficiency-aware, 0-100 score)
+  → AI contextual analysis for top candidates only (app.ai.groq_client.analyze_opportunity_match)
+  → hybrid final score (deterministic × 0.6 + AI × 0.4, configurable via env)
+  → ranked, filtered results
+  → GET /api/opportunities/recommendations
+  → frontend opportunity cards (/opportunities, and "Opportunities For You" on the dashboard)
+```
+
+`opportunity_provider.py` is the only module that knows about RapidAPI — the matching engine, AI analysis, ranking, and frontend are all provider-agnostic, so the provider could be swapped again without touching them. Both internships and jobs run through the exact same matching/AI/ranking code path; there is no separate engine per type.
+
+Every opportunity returned originates from the live provider — there is no local/fake job dataset. If RapidAPI is unavailable, rate-limited, or unconfigured, the endpoint returns `{"recommendations": [], "source_status": "unavailable", "message": "..."}` instead of failing. If only one type fails (e.g. jobs down but internships fine), the data that *did* load is still returned (`source_status: "ok"`) with an informational message about what's missing — a partial provider outage never blanks out working data. The UI shows a matching "temporarily unavailable" empty state only when nothing could be fetched at all.
+
+**Note on RapidAPI quota:** opportunity-data providers on RapidAPI commonly enforce small monthly request quotas. Exactly one provider request is made per opportunity type per cache window (`OPPORTUNITY_CACHE_TTL_SECONDS`) — never more, regardless of how many users/pages hit the endpoint — and a 429 triggers an in-memory backoff (`OPPORTUNITY_QUOTA_BACKOFF_SECONDS`) so a spent quota fails fast instead of being hit again on every request. A 429 response means the plan is spent, not a bug — check usage at your RapidAPI dashboard.
 
 ---
 
@@ -367,7 +431,7 @@ GROQ_MODEL=openai/gpt-oss-120b
 | Command | Description |
 |---------|-------------|
 | `uvicorn app.main:app --reload` | Start dev server with auto-reload |
-| `pytest` | Run tests (300+ tests) |
+| `pytest` | Run tests (340+ tests) |
 
 ---
 

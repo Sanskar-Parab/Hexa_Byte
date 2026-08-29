@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from app.database.config import get_db
 from app.models.user import User
 
-SECRET_KEY = os.getenv("JWT_SECRET", "pathpilot-dev-secret-change-in-production")
+SECRET_KEY = os.getenv("JWT_SECRET", "nextpath-dev-secret-change-in-production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 

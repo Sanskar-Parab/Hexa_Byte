@@ -263,4 +263,21 @@ export const api = {
 
   deleteJobAnalysis: (id: string) =>
     fetcher(`/job/${id}`, { method: "DELETE" }),
+
+  getOpportunityRecommendations: (params?: {
+    type?: "all" | "internship" | "job";
+    limit?: number;
+    minMatch?: number;
+    careerId?: string;
+  }) => {
+    const query = new URLSearchParams();
+    if (params?.type) query.set("type", params.type);
+    if (params?.limit) query.set("limit", String(params.limit));
+    if (params?.minMatch) query.set("min_match", String(params.minMatch));
+    if (params?.careerId) query.set("career_id", params.careerId);
+    const qs = query.toString();
+    return fetcher<import("@/types").OpportunityRecommendationsResponse>(
+      `/opportunities/recommendations${qs ? `?${qs}` : ""}`
+    );
+  },
 };
