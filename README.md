@@ -1,8 +1,8 @@
-# PathPilot AI
+# Next Path AI
 
 **Your Career Path, Personalized by AI**
 
-PathPilot AI is an AI-powered career guidance platform that analyzes your skills, interests, and goals to recommend personalized career paths with actionable roadmaps, skill gap analysis, AI coaching, and much more.
+Next Path AI is an AI-powered career guidance platform that analyzes your skills, interests, and goals to recommend personalized career paths with actionable roadmaps, skill gap analysis, AI coaching, and much more.
 
 ---
 
