@@ -355,5 +355,79 @@ class GroqAIClient:
 
         return None, last_error or "AI failed to analyze results after multiple attempts."
 
+    def generate_coaching_response(
+        self,
+        system_prompt: str,
+        context_string: str,
+        conversation: list[dict],
+        question: str,
+    ) -> tuple[Optional[str], Optional[str]]:
+        """Generate a personalized coaching response and return (text, error_message).
+
+        `conversation` is a list of {"role": "user"|"assistant", "content": str}
+        recent chat turns (already trimmed by the caller). The structured user
+        context is injected as its own system message on every call so the model
+        always reasons over the latest database state rather than stale history.
+        """
+        if not self.is_available:
+            error_msg = self._error_message or "AI service not available"
+            logger.warning(error_msg)
+            return None, error_msg
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {
+                "role": "system",
+                "content": (
+                    "STUDENT CONTEXT (from the application database — treat as ground truth, "
+                    "never contradict it, never invent data beyond it):\n" + context_string
+                ),
+            },
+        ]
+        for turn in conversation:
+            role = turn.get("role")
+            content = turn.get("content")
+            if role in ("user", "assistant") and content:
+                messages.append({"role": role, "content": str(content)[:2000]})
+        messages.append({"role": "user", "content": question})
+
+        candidate_models = self._get_candidate_models()
+        last_error = None
+
+        for model in candidate_models:
+            for attempt in range(2):
+                try:
+                    response = self._client.chat.completions.create(
+                        model=model,
+                        messages=messages,
+                        temperature=0.6,
+                        max_tokens=900,
+                        timeout=20,
+                    )
+
+                    content = response.choices[0].message.content
+                    if not content or not content.strip():
+                        logger.warning(f"Model {model} attempt {attempt + 1}: Empty coaching response from Groq")
+                        continue
+
+                    return _strip_thinking_tags(content), None
+
+                except Exception as e:
+                    logger.error(f"Groq coaching error on model {model} attempt {attempt + 1}: {type(e).__name__}: {e}")
+                    error_msg = f"AI service error: {type(e).__name__}"
+                    err_str = str(e).lower()
+                    if "rate" in err_str or "limit" in err_str or "429" in err_str:
+                        error_msg = "AI rate limit reached."
+                    elif "quota" in err_str:
+                        error_msg = "AI quota exceeded."
+                    elif "timeout" in err_str:
+                        error_msg = "AI service timeout."
+                    elif "model" in err_str and ("not found" in err_str or "decommission" in err_str or "invalid" in err_str):
+                        error_msg = "AI model unavailable."
+                    last_error = error_msg
+                    break
+
+        return None, last_error or "AI failed to generate a coaching response after multiple attempts."
+
 
 groq_client = GroqAIClient()

@@ -158,10 +158,10 @@ export const api = {
       body: JSON.stringify({ item_type: itemType, item_id: itemId, status }),
     }),
 
-  askCoach: (question: string) =>
+  askCoach: (question: string, conversation?: { role: "user" | "assistant"; content: string }[]) =>
     fetcher<any>("/coach/ask", {
       method: "POST",
-      body: JSON.stringify({ question }),
+      body: JSON.stringify({ question, conversation: conversation || [] }),
     }),
 
   getCoachContext: () =>

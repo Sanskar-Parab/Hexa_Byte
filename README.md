@@ -16,7 +16,7 @@ Next Path AI is an AI-powered career guidance platform that analyzes your skills
 - **Skill Gap Analysis** — Compare current skills against career requirements with priority levels and severity
 - **Personalized Learning Roadmaps** — Adaptive 4-6 phase learning plans with skills, activities, projects, and duration estimates
 - **Progress Tracking** — Dashboard with readiness scores, phase completion, weekly actions, and 7-day charts
-- **AI Coach** — Context-aware career coaching with intent detection, suggestions, and truth enforcement
+- **AI Coach** — Context-aware career coaching with conversation history support, intent detection, suggestions, truth enforcement, and security hardening (evidence source distinction, follow-up context, prompt injection protection)
 - **Demo Mode** — Pre-loaded sample data (Aarav Sharma) for instant testing
 
 ### Skill Management
@@ -37,9 +37,11 @@ Next Path AI is an AI-powered career guidance platform that analyzes your skills
 - **Skill-Aware Projects** — Composite scoring combining career relevance, gap relevance, roadmap relevance, and difficulty fit
 
 ### AI Integration
-- **Multi-Model AI** — Groq-powered assessment, project generation with model fallback and rate limit handling
+- **Multi-Model AI** — Groq-powered assessment, project generation, and career coaching with model fallback and rate limit handling
 - **Deterministic Fallbacks** — Every AI feature has a non-AI fallback for reliability
 - **AI Project Generation** — Generate custom project recommendations based on skill levels, gaps, and roadmap phase
+- **Conversation-Aware Coaching** — Coach maintains chat history for follow-up questions (e.g., "Why?", "Tell me more") while always re-fetching fresh user context from the database
+- **Security Hardening** — Prompt injection protection, evidence source transparency (assessed vs. self-reported vs. project-backed), and strict context-only data usage
 
 ---
 
@@ -65,8 +67,7 @@ Next Path AI is an AI-powered career guidance platform that analyzes your skills
 | SQLAlchemy 2.0 | ORM and database management |
 | SQLite / PostgreSQL | Database (SQLite for dev, PostgreSQL for prod) |
 | Pydantic 2.5 | Data validation schemas |
-| OpenAI GPT-4 | AI roadmaps and coaching (optional) |
-| Groq API | AI skill assessment, project generation, model fallback |
+| Groq API | AI skill assessment, project generation, career coaching with model fallback |
 | PyPDF2 | Resume PDF text extraction |
 | JWT + bcrypt | Authentication and security |
 | Alembic | Database migrations |
@@ -88,7 +89,7 @@ pathpilot/
 │   │   ├── database/            # DB config, migrations, seed data
 │   │   ├── ai/                  # OpenAI & Groq integration
 │   │   └── utils/               # Auth utilities
-│   ├── tests/                   # 285+ backend tests
+│   ├── tests/                   # 300+ backend tests
 │   └── requirements.txt         # Python dependencies
 │
 └── frontend/
@@ -275,7 +276,7 @@ GROQ_MODEL=openai/gpt-oss-120b
 ### AI Coach
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/coach/ask` | Ask AI career coach |
+| POST | `/api/coach/ask` | Ask AI career coach (accepts optional `conversation` history for follow-ups) |
 | GET | `/api/coach/context` | Get coach context summary |
 
 ### Skill Assessment (AI)
@@ -335,7 +336,7 @@ GROQ_MODEL=openai/gpt-oss-120b
 7. **Track progress** — readiness scores, phase completion, weekly actions, and 7-day charts
 8. **Upload your resume** — automatic skill extraction and evidence creation
 9. **Analyze job descriptions** — see your alignment and skill match breakdown
-10. **Chat with AI Coach** — context-aware career coaching with personalized suggestions
+10. **Chat with AI Coach** — context-aware career coaching with conversation history for follow-ups (e.g., "Why?", "Tell me more"), evidence source transparency, and security hardening
 11. **Take AI skill assessments** — Groq-powered MCQs with proficiency scoring
 
 ---

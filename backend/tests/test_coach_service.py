@@ -6,6 +6,8 @@ from app.services.coach_service import (
     _build_context_string,
     _build_suggestions,
     _build_fallback_response,
+    _trim_conversation,
+    ask_coach,
 )
 
 
@@ -347,3 +349,114 @@ class TestBuildFallbackResponse:
         response = _build_fallback_response(context, "How many projects done?")
         assert "0" in response
         assert "Start building" in response
+
+
+class TestTrimConversation:
+    def test_keeps_only_user_and_assistant_roles(self):
+        conversation = [
+            {"role": "system", "content": "should be dropped"},
+            {"role": "user", "content": "What should I learn next?"},
+            {"role": "assistant", "content": "Node.js."},
+        ]
+        result = _trim_conversation(conversation)
+        assert result == [
+            {"role": "user", "content": "What should I learn next?"},
+            {"role": "assistant", "content": "Node.js."},
+        ]
+
+    def test_limits_to_max_messages(self):
+        conversation = [{"role": "user", "content": f"msg {i}"} for i in range(30)]
+        result = _trim_conversation(conversation)
+        assert len(result) <= 10
+        assert result[-1]["content"] == "msg 29"
+
+    def test_handles_none_and_empty(self):
+        assert _trim_conversation(None) == []
+        assert _trim_conversation([]) == []
+
+    def test_drops_malformed_entries(self):
+        conversation = [
+            {"role": "user", "content": ""},
+            {"role": "user"},
+            "not a dict",
+            {"role": "user", "content": "real question"},
+        ]
+        result = _trim_conversation(conversation)
+        assert result == [{"role": "user", "content": "real question"}]
+
+
+class TestAskCoachGroqWiring:
+    """Verifies ask_coach actually calls the Groq client with fresh DB context,
+    rather than silently falling back to the deterministic template response."""
+
+    @pytest.mark.asyncio
+    async def test_uses_groq_when_available(self):
+        db = MagicMock()
+        user_id = uuid4()
+        fake_context = {
+            "name": "Alice",
+            "skills": [{"name": "Node.js", "proficiency": 2, "confidence": "MEDIUM"}],
+            "selected_career": None,
+            "skill_gaps": None,
+            "roadmap": None,
+            "projects": {"completed": 0},
+            "evidence": {},
+            "next_best_action": {},
+        }
+        with patch("app.services.coach_service._gather_user_context", return_value=fake_context), \
+             patch("app.ai.groq_client.groq_client") as mock_groq:
+            mock_groq.is_available = True
+            mock_groq.generate_coaching_response.return_value = ("Focus on Node.js next.", None)
+
+            result = await ask_coach(db, user_id, "What should I learn next?", conversation=[])
+
+            assert result["source"] == "ai"
+            assert result["response"] == "Focus on Node.js next."
+            mock_groq.generate_coaching_response.assert_called_once()
+            call_args = mock_groq.generate_coaching_response.call_args[0]
+            # system_prompt, context_string, conversation, question
+            assert "Node.js" in call_args[1]
+            assert call_args[3] == "What should I learn next?"
+
+    @pytest.mark.asyncio
+    async def test_passes_trimmed_conversation_for_followups(self):
+        db = MagicMock()
+        user_id = uuid4()
+        fake_context = {"name": "Bob", "skills": [], "next_best_action": {}, "evidence": {}, "projects": {}}
+        history = [
+            {"role": "user", "content": "What should I learn next?"},
+            {"role": "assistant", "content": "Node.js."},
+        ]
+        with patch("app.services.coach_service._gather_user_context", return_value=fake_context), \
+             patch("app.ai.groq_client.groq_client") as mock_groq:
+            mock_groq.is_available = True
+            mock_groq.generate_coaching_response.return_value = ("Because it's your largest gap.", None)
+
+            result = await ask_coach(db, user_id, "Why?", conversation=history)
+
+            assert result["response"] == "Because it's your largest gap."
+            call_args = mock_groq.generate_coaching_response.call_args[0]
+            assert call_args[2] == history
+
+    @pytest.mark.asyncio
+    async def test_falls_back_when_groq_unavailable(self):
+        db = MagicMock()
+        user_id = uuid4()
+        fake_context = {
+            "name": "Charlie",
+            "skills": [],
+            "selected_career": None,
+            "skill_gaps": None,
+            "roadmap": None,
+            "projects": {},
+            "evidence": {},
+            "next_best_action": {},
+        }
+        with patch("app.services.coach_service._gather_user_context", return_value=fake_context), \
+             patch("app.ai.groq_client.groq_client") as mock_groq:
+            mock_groq.is_available = False
+
+            result = await ask_coach(db, user_id, "What should I learn next?", conversation=[])
+
+            assert result["source"] == "fallback"
+            assert "haven't added any skills" in result["response"]

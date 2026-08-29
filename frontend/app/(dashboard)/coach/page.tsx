@@ -49,8 +49,11 @@ export default function CoachPage() {
     }
   };
 
-  const handleAsk = async (question: string) => {
-    const result = await api.askCoach(question);
+  const handleAsk = async (
+    question: string,
+    conversation: { role: "user" | "assistant"; content: string }[]
+  ) => {
+    const result = await api.askCoach(question, conversation);
     return {
       response: result.response,
       suggestions: result.suggestions || [],

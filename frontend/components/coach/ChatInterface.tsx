@@ -13,12 +13,17 @@ interface Message {
 }
 
 interface ChatInterfaceProps {
-  onAsk: (question: string, context?: string) => Promise<{
+  onAsk: (
+    question: string,
+    conversation: { role: "user" | "assistant"; content: string }[]
+  ) => Promise<{
     response: string;
     suggestions: string[];
   }>;
   focusSkill?: string | null;
 }
+
+const MAX_HISTORY_MESSAGES = 10; // last ~5 turns — enough for follow-ups like "why?", bounded so the prompt stays small
 
 function getStarterQuestions(focusSkill?: string | null) {
   return [
@@ -77,12 +82,18 @@ export function ChatInterface({ onAsk, focusSkill }: ChatInterfaceProps) {
     const q = question || input.trim();
     if (!q || loading) return;
 
+    // Build history from the messages already on screen, before appending the new question.
+    const history = messages
+      .filter((m) => m.role === "user" || m.role === "assistant")
+      .slice(-MAX_HISTORY_MESSAGES)
+      .map((m) => ({ role: m.role, content: m.content }));
+
     setInput("");
     setMessages((prev) => [...prev, { role: "user", content: q }]);
     setLoading(true);
 
     try {
-      const result = await onAsk(q);
+      const result = await onAsk(q, history);
       setMessages((prev) => [
         ...prev,
         {
@@ -91,12 +102,15 @@ export function ChatInterface({ onAsk, focusSkill }: ChatInterfaceProps) {
           suggestions: result.suggestions,
         },
       ]);
-    } catch {
+    } catch (err) {
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content: "Sorry, I couldn't process that. Please try again.",
+          content:
+            err instanceof Error && err.message
+              ? `Sorry, I couldn't process that: ${err.message}`
+              : "Sorry, I couldn't process that. Please try again.",
         },
       ]);
     } finally {

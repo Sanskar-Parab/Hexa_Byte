@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
@@ -10,8 +10,17 @@ from app.services.coach_service import ask_coach, get_coach_context
 router = APIRouter(prefix="/api/coach", tags=["coach"])
 
 
+class ConversationTurn(BaseModel):
+    role: str
+    content: str
+
+
 class CoachRequest(BaseModel):
     question: str
+    # Recent chat history only, for follow-up questions like "why?" — never a
+    # source of user identity or profile data. That always comes from the
+    # authenticated session below.
+    conversation: list[ConversationTurn] = Field(default_factory=list)
 
 
 @router.post("/ask")
@@ -20,7 +29,8 @@ async def ask_coach_endpoint(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    result = await ask_coach(db, current_user.id, request.question)
+    conversation = [turn.model_dump() for turn in request.conversation]
+    result = await ask_coach(db, current_user.id, request.question, conversation)
     return result
 
 
