@@ -2,14 +2,19 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { FolderKanban, Route, Sparkles, BarChart3, CheckCircle2, Clock, TrendingUp, Filter } from "lucide-react";
+import { FolderKanban, Route, Sparkles, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SectionHeader } from "@/components/ui/section-header";
+import { EmptyState } from "@/components/ui/empty-state";
+import { LoadingState } from "@/components/ui/loading-state";
 import { ProjectCard } from "@/components/projects/ProjectCard";
 import { api } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import { SkillAwareProject, AIGeneratedProjectDB, ProjectStats } from "@/types";
+
+const DIFFICULTY_STEPS = ["BEGINNER", "INTERMEDIATE", "ADVANCED", "INDUSTRY"];
 
 export default function ProjectsPage() {
   const router = useRouter();
@@ -102,137 +107,135 @@ export default function ProjectsPage() {
   }, [loadData]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-      </div>
-    );
+    return <LoadingState message="Finding projects that close your gaps..." />;
   }
 
-  const DIFFICULTY_COLORS: Record<string, string> = {
-    BEGINNER: "bg-green-100 text-green-800",
-    INTERMEDIATE: "bg-blue-100 text-blue-800",
-    ADVANCED: "bg-purple-100 text-purple-800",
-    INDUSTRY: "bg-amber-100 text-amber-800",
-  };
-
   const allProjects = [
-    ...projects.map(p => ({ ...p, type: "database" as const })),
-    ...aiProjects.map(p => ({ ...p, type: "ai_generated" as const, is_ai_generated: true })),
+    ...projects.map((p) => ({ ...p, type: "database" as const })),
+    ...aiProjects.map((p) => ({ ...p, type: "ai_generated" as const, is_ai_generated: true })),
   ];
 
-  const filteredProjects = statusFilter === "all"
-    ? allProjects
-    : allProjects.filter(p => p.status === statusFilter);
+  const filteredProjects = statusFilter === "all" ? allProjects : allProjects.filter((p) => p.status === statusFilter);
+  const filteredDBProjects = filteredProjects.filter((p) => p.type === "database");
+  const filteredAIProjects = filteredProjects.filter((p) => p.type === "ai_generated");
 
-  const filteredDBProjects = filteredProjects.filter(p => p.type === "database");
-  const filteredAIProjects = filteredProjects.filter(p => p.type === "ai_generated");
+  const activeStepIndex = DIFFICULTY_STEPS.indexOf((userDifficulty || "BEGINNER").toUpperCase());
 
   return (
     <div className="max-w-6xl space-y-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Recommended Projects</h1>
-          <p className="text-slate-600 mt-1">
-            Build your portfolio with projects matched to your goals and skill gaps.
-          </p>
-        </div>
-        {selectedCareerId && (
-          <Button onClick={handleGenerateAI} disabled={aiLoading} variant="outline">
-            <Sparkles className={`mr-2 h-4 w-4 ${aiLoading ? "animate-spin" : ""}`} />
-            {aiLoading ? "Generating..." : "AI Generate"}
-          </Button>
-        )}
-      </div>
+      <SectionHeader
+        eyebrow="Build"
+        title="Projects That Build Your Skills"
+        description="Projects are selected to close your current career gaps."
+        action={
+          selectedCareerId && (
+            <Button onClick={handleGenerateAI} disabled={aiLoading} variant="outline">
+              <Sparkles className={cn("mr-2 h-4 w-4", aiLoading && "animate-spin")} />
+              {aiLoading ? "Generating..." : "AI Generate"}
+            </Button>
+          )
+        }
+      />
 
-      {projectStats && (
-        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-100">
-          <CardContent className="p-4">
-            <div className="grid grid-cols-4 gap-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-slate-900">{projectStats.total}</div>
-                <div className="text-xs text-slate-500">Total Projects</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">{projectStats.in_progress}</div>
-                <div className="text-xs text-slate-500">In Progress</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-emerald-600">{projectStats.completed}</div>
-                <div className="text-xs text-slate-500">Completed</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-slate-600">{projectStats.recommended}</div>
-                <div className="text-xs text-slate-500">Not Started</div>
-              </div>
+      {userDifficulty && (
+        <Card>
+          <CardContent className="flex flex-col gap-3 p-5">
+            <p className="font-mono text-xs uppercase tracking-wide text-mute">Your Progression</p>
+            <div className="flex items-center">
+              {DIFFICULTY_STEPS.map((step, i) => (
+                <div key={step} className="flex flex-1 items-center last:flex-initial">
+                  <div className="flex flex-col items-center gap-1.5">
+                    <div
+                      className={cn(
+                        "flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold",
+                        i <= activeStepIndex ? "bg-ink text-white" : "bg-canvas-soft2 text-mute"
+                      )}
+                    >
+                      {i + 1}
+                    </div>
+                    <span className={cn("text-[11px] font-medium", i <= activeStepIndex ? "text-ink" : "text-mute")}>
+                      {step.charAt(0) + step.slice(1).toLowerCase()}
+                    </span>
+                  </div>
+                  {i < DIFFICULTY_STEPS.length - 1 && (
+                    <div className={cn("mx-2 h-0.5 flex-1 rounded-full", i < activeStepIndex ? "bg-ink" : "bg-hairline")} />
+                  )}
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
       )}
 
-      <div className="flex items-center gap-4">
-        <Card className="bg-slate-50 flex-1">
-          <CardContent className="p-3 flex items-center gap-3">
-            <BarChart3 className="h-5 w-5 text-slate-500" />
-            <span className="text-sm text-slate-600">Difficulty Level:</span>
-            <Select value={preferredDifficulty} onValueChange={handleDifficultyChange}>
-              <SelectTrigger className="w-[180px] h-8">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="AUTO">Auto (from skills)</SelectItem>
-                <SelectItem value="BEGINNER">Beginner</SelectItem>
-                <SelectItem value="INTERMEDIATE">Intermediate</SelectItem>
-                <SelectItem value="ADVANCED">Advanced</SelectItem>
-                <SelectItem value="INDUSTRY">Industry</SelectItem>
-              </SelectContent>
-            </Select>
-          </CardContent>
-        </Card>
+      {projectStats && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
+            { label: "Total Projects", value: projectStats.total },
+            { label: "In Progress", value: projectStats.in_progress },
+            { label: "Completed", value: projectStats.completed },
+            { label: "Not Started", value: projectStats.recommended },
+          ].map((stat) => (
+            <Card key={stat.label}>
+              <CardContent className="p-4 text-center">
+                <div className="text-2xl font-semibold tracking-tight text-ink">{stat.value}</div>
+                <div className="mt-0.5 text-xs text-mute">{stat.label}</div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
-        <Card className="bg-slate-50">
-          <CardContent className="p-3 flex items-center gap-2">
-            <Filter className="h-4 w-4 text-slate-500" />
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[140px] h-8">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Projects</SelectItem>
-                <SelectItem value="recommended">Not Started</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-              </SelectContent>
-            </Select>
-          </CardContent>
-        </Card>
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <div className="flex flex-1 items-center gap-3 rounded-xl border border-hairline bg-canvas px-4 py-2.5">
+          <span className="text-sm text-body whitespace-nowrap">Difficulty Level</span>
+          <Select value={preferredDifficulty} onValueChange={handleDifficultyChange}>
+            <SelectTrigger className="h-8 w-full sm:w-[180px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="AUTO">Auto (from skills)</SelectItem>
+              <SelectItem value="BEGINNER">Beginner</SelectItem>
+              <SelectItem value="INTERMEDIATE">Intermediate</SelectItem>
+              <SelectItem value="ADVANCED">Advanced</SelectItem>
+              <SelectItem value="INDUSTRY">Industry</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex items-center gap-2 rounded-xl border border-hairline bg-canvas px-4 py-2.5">
+          <Filter className="h-4 w-4 text-mute" />
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="h-8 w-[140px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Projects</SelectItem>
+              <SelectItem value="recommended">Not Started</SelectItem>
+              <SelectItem value="in_progress">In Progress</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {allProjects.length === 0 ? (
-        <div className="text-center py-20">
-          <FolderKanban className="h-12 w-12 text-slate-300 mx-auto mb-3" />
-          <h2 className="text-xl font-semibold text-slate-900">No Projects Yet</h2>
-          <p className="text-slate-600 mt-2">
-            {selectedCareerId
+        <EmptyState
+          icon={FolderKanban}
+          title="No projects yet"
+          description={
+            selectedCareerId
               ? "Generate your roadmap to receive project recommendations."
-              : "Select a career and generate a roadmap to see recommended projects."}
-          </p>
-          {selectedCareerId ? (
-            <Button onClick={() => router.push(`/careers/${selectedCareerId}`)} className="mt-4">
-              <Route className="mr-2 h-4 w-4" /> Go to Career Details
-            </Button>
-          ) : (
-            <Button onClick={() => router.push("/careers")} className="mt-4">
-              Browse Careers
-            </Button>
-          )}
-        </div>
+              : "Select a career and generate a roadmap to see recommended projects."
+          }
+          actionLabel={selectedCareerId ? "Go to Career Details" : "Browse Careers"}
+          onAction={() => router.push(selectedCareerId ? `/careers/${selectedCareerId}` : "/careers")}
+        />
       ) : (
         <>
           {filteredDBProjects.length > 0 && (
             <div>
-              <h2 className="text-lg font-semibold text-slate-900 mb-3">Database Projects</h2>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-mute">Recommended Projects</h2>
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {filteredDBProjects.map((project) => (
                   <ProjectCard key={project.id} project={project} onUpdate={handleProjectUpdate} />
                 ))}
@@ -242,11 +245,11 @@ export default function ProjectsPage() {
 
           {filteredAIProjects.length > 0 && (
             <div>
-              <h2 className="text-lg font-semibold text-slate-900 mb-3">
-                <Sparkles className="inline h-4 w-4 mr-1 text-amber-500" />
+              <h2 className="mb-3 flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-mute">
+                <Sparkles className="h-4 w-4 text-violet" />
                 AI-Generated Projects
               </h2>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {filteredAIProjects.map((project) => (
                   <ProjectCard key={project.id} project={project} onUpdate={handleProjectUpdate} />
                 ))}
@@ -255,11 +258,11 @@ export default function ProjectsPage() {
           )}
 
           {filteredProjects.length === 0 && allProjects.length > 0 && (
-            <div className="text-center py-12">
-              <Filter className="h-10 w-10 text-slate-300 mx-auto mb-3" />
-              <h2 className="text-lg font-semibold text-slate-900">No projects match this filter</h2>
-              <p className="text-slate-600 mt-1">Try selecting a different status filter.</p>
-            </div>
+            <EmptyState
+              icon={Filter}
+              title="No projects match this filter"
+              description="Try selecting a different status filter."
+            />
           )}
         </>
       )}

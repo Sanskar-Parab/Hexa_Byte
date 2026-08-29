@@ -12,7 +12,8 @@ import {
   Info,
   Target,
 } from "lucide-react";
-import type { JobMatchResult } from "@/types";
+import { cn } from "@/lib/utils";
+import type { JobMatchResult, JobSkillMatch } from "@/types";
 
 interface JobMatchResultsProps {
   result: JobMatchResult;
@@ -33,106 +34,102 @@ export function JobMatchResults({ result }: JobMatchResultsProps) {
     matched_count,
   } = result;
 
-  const alignmentColor =
-    alignment_percentage >= 70 ? "text-emerald-600" :
-    alignment_percentage >= 40 ? "text-amber-600" :
-    "text-rose-600";
-
-  const alignmentBg =
-    alignment_percentage >= 70 ? "bg-emerald-50" :
-    alignment_percentage >= 40 ? "bg-amber-50" :
-    "bg-rose-50";
+  const tone =
+    alignment_percentage >= 70 ? "link" : alignment_percentage >= 40 ? "warn" : "err";
 
   return (
-    <div className="space-y-6">
-      <Card className={`${alignmentBg} border-2`}>
-        <CardContent className="p-6">
-          <div className="text-center space-y-3">
-            <p className="text-sm font-medium text-slate-600">Job Match Analysis</p>
-            <h2 className="text-xl font-bold text-slate-900">{job_title}</h2>
-            <div className={`text-5xl font-bold ${alignmentColor}`}>
+    <div className="space-y-5">
+      <Card>
+        <CardContent className="p-6 sm:p-8">
+          <div className="text-center">
+            <p className="font-mono text-xs uppercase tracking-wider text-mute">Job Alignment</p>
+            <h2 className="mt-1 text-lg font-semibold text-ink">{job_title}</h2>
+            <div
+              className={cn(
+                "mt-4 text-5xl font-semibold tracking-tight",
+                tone === "link" && "text-link",
+                tone === "warn" && "text-warn-deep",
+                tone === "err" && "text-err-deep"
+              )}
+            >
               {alignment_percentage}%
             </div>
-            <p className="text-sm text-slate-600">alignment</p>
-            <Progress value={alignment_percentage} className="h-3 max-w-md mx-auto" />
-            <div className="flex justify-center gap-6 text-sm text-slate-600 pt-2">
+            <Progress value={alignment_percentage} className="mx-auto mt-4 h-2 max-w-md" />
+            <div className="mt-4 flex flex-col items-center justify-center gap-1 text-sm text-body sm:flex-row sm:gap-6">
               <span>{matched_count} / {required_skills_count} required skills matched</span>
+              <span className="hidden sm:inline text-hairline-strong">·</span>
               <span>{evidence_created} evidence records created</span>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <Card className="border-blue-200 bg-blue-50">
-        <CardContent className="p-4">
-          <div className="flex items-start gap-3">
-            <Info className="h-5 w-5 text-blue-600 mt-0.5" />
-            <div>
-              <p className="font-medium text-blue-800">Job Analysis Creates Evidence Only</p>
-              <p className="text-sm text-blue-700 mt-1">
-                Evidence is created only for skills you <strong>already have</strong>.
-                Missing skills are identified but no false claims are made.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex items-start gap-3 rounded-xl border border-link/20 bg-link-soft/40 p-4">
+        <Info className="mt-0.5 h-4 w-4 shrink-0 text-link-deep" />
+        <p className="text-sm text-link-deep">
+          Evidence is only created for skills you already demonstrate. Missing skills are identified
+          honestly — no false claims are made on your behalf.
+        </p>
+      </div>
 
       {strong_skills.length > 0 && (
         <SkillSection
-          title="Strong Skills"
-          icon={<CheckCircle2 className="h-5 w-5 text-emerald-600" />}
+          title="Strong"
+          icon={<CheckCircle2 className="h-4 w-4 text-link" />}
           skills={strong_skills}
-          badgeClass="bg-emerald-50 text-emerald-700 border-emerald-200"
+          markClassName="text-link"
+          mark="✓"
         />
       )}
 
       {developing_skills.length > 0 && (
         <SkillSection
-          title="Developing Skills"
-          icon={<AlertTriangle className="h-5 w-5 text-amber-600" />}
+          title="Developing"
+          icon={<AlertTriangle className="h-4 w-4 text-warn-deep" />}
           skills={developing_skills}
-          badgeClass="bg-amber-50 text-amber-700 border-amber-200"
+          markClassName="text-warn-deep"
+          mark="△"
         />
       )}
 
       {missing_skills.length > 0 && (
         <SkillSection
-          title="Missing Skills"
-          icon={<XCircle className="h-5 w-5 text-rose-600" />}
+          title="Missing"
+          icon={<XCircle className="h-4 w-4 text-err" />}
           skills={missing_skills}
-          badgeClass="bg-rose-50 text-rose-700 border-rose-200"
+          markClassName="text-err"
+          mark="○"
         />
       )}
 
       {not_demonstrated.length > 0 && (
         <SkillSection
           title="Not Demonstrated"
-          icon={<HelpCircle className="h-5 w-5 text-slate-500" />}
+          icon={<HelpCircle className="h-4 w-4 text-mute" />}
           skills={not_demonstrated}
-          badgeClass="bg-slate-50 text-slate-700 border-slate-200"
+          markClassName="text-mute"
+          mark="?"
         />
       )}
 
       {(top_gap || next_action) && (
-        <Card>
+        <Card className="border-ink/10 bg-canvas-soft">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Target className="h-5 w-5 text-blue-600" />
-              Recommendation
+            <CardTitle className="flex items-center gap-2 text-base font-semibold text-ink">
+              <Target className="h-4 w-4" />
+              Your Next Best Action
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {top_gap && (
-              <div className="flex items-start gap-2">
-                <span className="text-sm font-medium text-slate-700">Top Gap:</span>
-                <Badge variant="outline" className="bg-rose-50 text-rose-700">{top_gap}</Badge>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-body">Top Gap:</span>
+                <Badge variant="destructive">{top_gap}</Badge>
               </div>
             )}
             {next_action && (
-              <div className="flex items-center gap-2 text-sm text-slate-700">
-                <ArrowRight className="h-4 w-4 text-blue-600" />
-                <span className="font-medium">Next Action:</span>
+              <div className="flex items-start gap-2 text-sm text-ink">
+                <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-link" />
                 <span>{next_action}</span>
               </div>
             )}
@@ -147,35 +144,36 @@ function SkillSection({
   title,
   icon,
   skills,
-  badgeClass,
+  mark,
+  markClassName,
 }: {
   title: string;
   icon: React.ReactNode;
-  skills: any[];
-  badgeClass: string;
+  skills: JobSkillMatch[];
+  mark: string;
+  markClassName: string;
 }) {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 text-sm font-semibold text-ink">
           {icon}
           {title}
           <Badge variant="secondary" className="ml-1">{skills.length}</Badge>
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           {skills.map((skill, i) => (
             <div
               key={i}
-              className="flex items-center justify-between p-2 rounded-lg bg-slate-50"
+              className="flex items-center justify-between rounded-lg bg-canvas-soft px-3 py-2"
             >
-              <div className="flex-1">
-                <span className="font-medium text-sm text-slate-800">{skill.skill_name}</span>
+              <div className="flex items-center gap-2">
+                <span className={cn("font-mono text-sm", markClassName)}>{mark}</span>
+                <span className="text-sm font-medium text-ink">{skill.skill_name}</span>
                 {skill.user_proficiency > 0 && (
-                  <span className="ml-2 text-xs text-slate-500">
-                    Proficiency: {skill.user_proficiency}/5
-                  </span>
+                  <span className="text-xs text-mute">· {skill.user_proficiency}/5</span>
                 )}
               </div>
               {skill.evidence_count > 0 && (

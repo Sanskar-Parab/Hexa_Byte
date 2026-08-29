@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { LoadingState } from "@/components/ui/loading-state";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 
@@ -25,21 +26,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [user]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-      </div>
-    );
+    return <LoadingState fullScreen message="Loading your workspace..." />;
   }
 
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-canvas-soft">
       <Header />
       <div className="flex">
         <Sidebar progress={progress} />
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-hidden">{children}</main>
+        <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 overflow-x-hidden">{children}</main>
       </div>
     </div>
   );

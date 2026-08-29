@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Clock, Circle, SkipForward, Zap } from "lucide-react";
+import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PhaseCard } from "./PhaseCard";
 import { RoadmapPhase } from "@/types";
@@ -10,55 +10,64 @@ interface RoadmapTimelineProps {
   onUpdateStatus: (phaseId: string, status: string) => void;
 }
 
-const statusConfig = {
-  not_started: { icon: Circle, color: "text-slate-400", bg: "bg-slate-100", border: "border-slate-300" },
-  in_progress: { icon: Clock, color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-300" },
-  completed: { icon: Check, color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-300" },
-};
+function TimelineDot({ phase }: { phase: RoadmapPhase }) {
+  const isSkipped = phase.adaptation_mode === "skipped";
 
-const adaptationConfig = {
-  full: { label: null, color: "", bg: "" },
-  adapted: { label: "Accelerated", color: "text-blue-600", bg: "bg-blue-50" },
-  skipped: { label: "Skipped", color: "text-slate-500", bg: "bg-slate-50" },
-};
+  if (isSkipped) {
+    return (
+      <div className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-dashed border-hairline-strong bg-canvas" />
+    );
+  }
+
+  if (phase.status === "completed") {
+    return (
+      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-ink text-white shadow-card">
+        <Check className="h-4 w-4" />
+      </div>
+    );
+  }
+
+  if (phase.status === "in_progress") {
+    return (
+      <div className="relative flex h-9 w-9 items-center justify-center">
+        <span className="absolute inline-flex h-full w-full animate-pulse rounded-full bg-warn/30" />
+        <div className="relative flex h-7 w-7 items-center justify-center rounded-full border-2 border-warn bg-warn-soft" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-hairline bg-canvas" />
+  );
+}
 
 export function RoadmapTimeline({ phases, onUpdateStatus }: RoadmapTimelineProps) {
   return (
     <div className="relative">
-      <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-slate-200" />
+      <div className="absolute left-[18px] top-2 bottom-2 w-px bg-hairline" />
 
-      <div className="space-y-8">
+      <div className="space-y-6">
         {phases.map((phase) => {
-          const config = statusConfig[phase.status];
-          const adaptation = adaptationConfig[phase.adaptation_mode];
-          const Icon = phase.adaptation_mode === "skipped" ? SkipForward : config.icon;
-          const isSkipped = phase.adaptation_mode === "skipped";
-          const isAdapted = phase.adaptation_mode === "adapted";
+          const isCurrent = phase.status === "in_progress" && phase.adaptation_mode !== "skipped";
 
           return (
-            <div key={phase.id} className={cn("relative flex gap-6", isSkipped && "opacity-60")}>
-              <div className="relative z-10">
-                <div className={cn(
-                  "flex h-12 w-12 items-center justify-center rounded-full border-2 bg-white shadow-sm",
-                  isSkipped ? "border-slate-300 border-dashed" : config.border
-                )}>
-                  <Icon className={cn("h-5 w-5", isSkipped ? "text-slate-400" : config.color)} />
-                </div>
+            <div key={phase.id} className={cn("relative flex gap-5", phase.adaptation_mode === "skipped" && "opacity-70")}>
+              <div className="relative z-10 shrink-0 pt-0.5">
+                <TimelineDot phase={phase} />
               </div>
 
-              <div className="flex-1 pb-2">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-medium text-slate-500">Phase {phase.phase_number}</span>
-                  <span className={cn(
-                    "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
-                    isSkipped ? "bg-slate-100 text-slate-500" : isAdapted ? "bg-blue-50 text-blue-600" : config.bg + " " + config.color
-                  )}>
-                    {isSkipped && <SkipForward className="h-3 w-3" />}
-                    {isAdapted && <Zap className="h-3 w-3" />}
-                    {isSkipped ? "Skipped" : isAdapted ? "Accelerated" : phase.status.replace("_", " ")}
+              <div className="min-w-0 flex-1 pb-1">
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <span className="font-mono text-xs uppercase tracking-wide text-mute">
+                    Phase {phase.phase_number}
                   </span>
+                  {isCurrent && (
+                    <span className="inline-flex items-center rounded-full bg-ink px-2 py-0.5 font-mono text-[10px] font-medium uppercase tracking-wide text-white">
+                      Current
+                    </span>
+                  )}
                 </div>
-                <PhaseCard phase={phase} onUpdateStatus={onUpdateStatus} />
+                <PhaseCard phase={phase} onUpdateStatus={onUpdateStatus} defaultExpanded={isCurrent} />
               </div>
             </div>
           );

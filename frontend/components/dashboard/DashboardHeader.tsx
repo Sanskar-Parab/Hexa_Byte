@@ -1,6 +1,5 @@
 "use client";
 
-import { TrendingUp } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
 interface DashboardHeaderProps {
@@ -18,36 +17,31 @@ export function DashboardHeader({ name, overallProgress, careerReadiness }: Dash
   };
 
   return (
-    <div className="rounded-2xl bg-gradient-to-br from-blue-600 to-blue-700 p-6 sm:p-8 text-white shadow-xl shadow-blue-500/20">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">
-            {greeting()}, {name?.split(" ")[0] || "there"}
-          </h1>
-          <p className="mt-1 text-blue-100">
-            Here&apos;s your career development progress
-          </p>
-        </div>
-        <div className="flex items-center gap-2 bg-white/10 rounded-lg px-4 py-2">
-          <TrendingUp className="h-5 w-5 text-emerald-300" />
-          <span className="text-sm font-medium">{careerReadiness}% Career Ready</span>
-        </div>
-      </div>
+    <div>
+      <p className="font-mono text-xs uppercase tracking-wider text-mute">
+        {greeting()}, {name?.split(" ")[0] || "there"}
+      </p>
+      <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+        Your Next Move
+      </h1>
+      <p className="mt-2 max-w-xl text-sm text-body">
+        Know where you are, know where you&apos;re going, know what to do next.
+      </p>
 
-      <div className="mt-6 grid sm:grid-cols-2 gap-6">
-        <div>
-          <div className="flex items-center justify-between text-sm mb-2">
-            <span className="text-blue-100">Overall Progress</span>
-            <span className="font-semibold">{overallProgress}%</span>
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 sm:max-w-md">
+        <div className="rounded-xl border border-hairline bg-canvas p-4 shadow-card">
+          <div className="flex items-center justify-between text-xs text-mute">
+            <span>Overall Progress</span>
+            <span className="font-semibold text-ink">{overallProgress}%</span>
           </div>
-          <Progress value={overallProgress} className="h-2.5 bg-white/20" indicatorClassName="bg-emerald-400" />
+          <Progress value={overallProgress} className="mt-2 h-1.5 bg-hairline" indicatorClassName="bg-ink" />
         </div>
-        <div>
-          <div className="flex items-center justify-between text-sm mb-2">
-            <span className="text-blue-100">Career Readiness</span>
-            <span className="font-semibold">{careerReadiness}%</span>
+        <div className="rounded-xl border border-hairline bg-canvas p-4 shadow-card">
+          <div className="flex items-center justify-between text-xs text-mute">
+            <span>Career Readiness</span>
+            <span className="font-semibold text-ink">{careerReadiness}%</span>
           </div>
-          <Progress value={careerReadiness} className="h-2.5 bg-white/20" indicatorClassName="bg-amber-400" />
+          <Progress value={careerReadiness} className="mt-2 h-1.5 bg-hairline" indicatorClassName="bg-link" />
         </div>
       </div>
     </div>

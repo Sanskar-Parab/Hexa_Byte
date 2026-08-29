@@ -2,8 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Briefcase, Loader2 } from "lucide-react";
+import { Compass } from "lucide-react";
 import { CareerCard } from "@/components/career/CareerCard";
+import { SectionHeader } from "@/components/ui/section-header";
+import { EmptyState } from "@/components/ui/empty-state";
+import { CardSkeleton } from "@/components/ui/loading-state";
 import { api } from "@/lib/api";
 import { CareerRecommendation } from "@/types";
 
@@ -19,29 +22,30 @@ export default function CareersPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-      </div>
-    );
-  }
-
   return (
     <div className="max-w-6xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Career Recommendations</h1>
-        <p className="text-slate-600 mt-1">Based on your profile, here are your top career matches.</p>
-      </div>
+      <SectionHeader
+        eyebrow="Match"
+        title="Careers That Fit You"
+        description="Explore careers based on your demonstrated skills and interests."
+      />
 
-      {careers.length === 0 ? (
-        <div className="text-center py-20">
-          <Briefcase className="h-12 w-12 text-slate-300 mx-auto mb-3" />
-          <h2 className="text-xl font-semibold text-slate-900">No Recommendations Yet</h2>
-          <p className="text-slate-600 mt-2">Complete your profile and assessment to see career matches.</p>
+      {loading ? (
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <CardSkeleton key={i} />
+          ))}
         </div>
+      ) : careers.length === 0 ? (
+        <EmptyState
+          icon={Compass}
+          title="Your path starts here."
+          description="Complete your profile and assessment so Next Path AI can find careers that match your demonstrated skills."
+          actionLabel="Take the Assessment"
+          actionHref="/assessment"
+        />
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {careers.map((career) => (
             <CareerCard
               key={career.career_id}

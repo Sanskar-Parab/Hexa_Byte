@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { SectionHeader } from "@/components/ui/section-header";
+import { LoadingState } from "@/components/ui/loading-state";
 import { ClipboardCheck, History, Trash2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { JobAnalyzer } from "@/components/job/JobAnalyzer";
@@ -39,20 +41,14 @@ export default function JobAnalyzerPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-          <ClipboardCheck className="h-6 w-6 text-blue-600" />
-          Job Reality Check
-        </h1>
-        <p className="text-slate-600 mt-1">
-          Paste a job description to see how your skills match up.
-        </p>
-      </div>
+    <div className="mx-auto max-w-3xl space-y-6">
+      <SectionHeader
+        eyebrow="Job Match"
+        title="Job Reality Check"
+        description="Paste a real job description to see how your demonstrated skills actually line up."
+      />
 
-      {!matchResult && (
-        <JobAnalyzer onAnalysisComplete={setMatchResult} />
-      )}
+      {!matchResult && <JobAnalyzer onAnalysisComplete={setMatchResult} />}
 
       {matchResult && (
         <div className="space-y-4">
@@ -69,30 +65,30 @@ export default function JobAnalyzerPage() {
         </div>
       )}
 
-      {history.length > 0 && !matchResult && (
+      {loading && <LoadingState message="Loading your job analyses..." />}
+
+      {!loading && history.length > 0 && !matchResult && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <History className="h-5 w-5 text-slate-500" />
+            <CardTitle className="flex items-center gap-2 text-base font-semibold text-ink">
+              <History className="h-4 w-4 text-mute" />
               Previous Analyses
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
+            <div className="space-y-2">
               {history.map((item) => (
                 <div
                   key={item.id}
-                  className="flex items-center justify-between p-3 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors"
+                  className="flex items-center justify-between rounded-lg border border-hairline bg-canvas-soft p-3 transition-colors hover:bg-canvas-soft2"
                 >
                   <div className="flex items-center gap-3">
-                    <ClipboardCheck className="h-5 w-5 text-slate-400" />
+                    <ClipboardCheck className="h-5 w-5 text-mute" />
                     <div>
-                      <p className="font-medium text-sm text-slate-800">{item.job_title}</p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-sm font-medium text-ink">{item.job_title}</p>
+                      <p className="text-xs text-mute">
                         {item.required_skills.length} required skills
-                        {item.match_result && (
-                          <> · {item.match_result.alignment_percentage}% match</>
-                        )}
+                        {item.match_result && <> · {item.match_result.alignment_percentage}% match</>}
                         {" · "}
                         {new Date(item.created_at).toLocaleDateString()}
                       </p>
@@ -102,7 +98,7 @@ export default function JobAnalyzerPage() {
                     variant="ghost"
                     size="sm"
                     onClick={() => handleDelete(item.id)}
-                    className="text-slate-400 hover:text-rose-600"
+                    className="text-mute hover:text-err"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -111,10 +107,6 @@ export default function JobAnalyzerPage() {
             </div>
           </CardContent>
         </Card>
-      )}
-
-      {loading && (
-        <div className="text-center text-slate-500 py-8">Loading...</div>
       )}
     </div>
   );

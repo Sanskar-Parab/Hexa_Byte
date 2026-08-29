@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  Brain,
+  Fingerprint,
   BarChart3,
   Route,
   MessageSquare,
@@ -11,70 +11,65 @@ import {
 
 const features = [
   {
-    icon: Brain,
-    title: "Career Intelligence",
-    description: "AI analyzes your skills, interests, and market data to match you with ideal career paths.",
-    color: "text-blue-600 bg-blue-50",
+    icon: Fingerprint,
+    title: "Evidence-based skill profile",
+    description: "Your proficiency is built from what you can demonstrate — assessments, projects, resume — each weighted by confidence.",
   },
   {
     icon: BarChart3,
-    title: "Skill Gap Analysis",
-    description: "Visualize exactly where you stand vs. where you need to be for your target career.",
-    color: "text-emerald-600 bg-emerald-50",
+    title: "Skill gap analysis",
+    description: "See exactly where you stand against the skills your target career actually requires.",
   },
   {
     icon: Route,
-    title: "Personalized Roadmap",
-    description: "Get a step-by-step learning plan with phases, timelines, and hands-on activities.",
-    color: "text-violet-600 bg-violet-50",
+    title: "Adaptive roadmap",
+    description: "A phased plan that skips what you've already mastered and adjusts when your skills change.",
   },
   {
     icon: MessageSquare,
-    title: "AI Career Coach",
-    description: "Ask questions and get contextual advice about your career journey anytime.",
-    color: "text-amber-600 bg-amber-50",
+    title: "AI career coach",
+    description: "Ask anything about your progress and get answers grounded in your real data — not generic advice.",
   },
   {
     icon: TrendingUp,
-    title: "Progress Tracking",
-    description: "Monitor your skill growth and career readiness with visual dashboards.",
-    color: "text-rose-600 bg-rose-50",
+    title: "Career readiness tracking",
+    description: "A single readiness score that moves as your evidence grows, so progress is never a guess.",
   },
   {
     icon: FolderKanban,
-    title: "Project Recommendations",
-    description: "Build your portfolio with projects matched to your skill level and career goals.",
-    color: "text-sky-600 bg-sky-50",
+    title: "Projects that close gaps",
+    description: "Every recommended project is selected to target your biggest current skill gap.",
   },
 ];
 
 export function Features() {
   return (
-    <section className="py-24 bg-gradient-to-b from-slate-50 to-white">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-2xl mx-auto mb-16">
-          <p className="text-sm font-semibold text-blue-600 tracking-wide uppercase">Features</p>
-          <h2 className="mt-2 text-3xl sm:text-4xl font-bold text-slate-900">
-            Everything you need to navigate your career
+    <section className="border-t border-hairline bg-canvas-soft py-24">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto mb-16 max-w-xl text-center">
+          <p className="mb-2 font-mono text-xs uppercase tracking-wider text-mute">Features</p>
+          <h2 className="text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+            Everything you need to move with confidence.
           </h2>
-          <p className="mt-4 text-lg text-slate-600">
-            From discovery to execution, PathPilot provides the tools and intelligence to make your next career move with confidence.
+          <p className="mt-4 text-base leading-relaxed text-body">
+            From discovery to proof, Next Path AI gives you the intelligence to make your next
+            career move deliberately.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {features.map((feature) => {
             const Icon = feature.icon;
             return (
               <div
                 key={feature.title}
-                className="rounded-2xl border bg-white p-6 shadow-sm hover:shadow-md transition-all duration-300 group"
+                className="rounded-xl border border-hairline bg-canvas p-6 shadow-card transition-shadow hover:shadow-card-hover"
               >
-                <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${feature.color} mb-4 group-hover:scale-110 transition-transform`}>
-                  <Icon className="h-6 w-6" />
+                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-canvas-soft2">
+                  <Icon className="h-5 w-5 text-ink" />
                 </div>
-                <h3 className="text-lg font-semibold text-slate-900 mb-2">{feature.title}</h3>
-                <p className="text-sm text-slate-600 leading-relaxed">{feature.description}</p>
+                <h3 className="mb-1.5 text-base font-semibold text-ink">{feature.title}</h3>
+                <p className="text-sm leading-relaxed text-body">{feature.description}</p>
               </div>
             );
           })}

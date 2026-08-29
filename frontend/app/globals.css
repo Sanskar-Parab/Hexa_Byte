@@ -4,26 +4,26 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 0 0% 98%;
+    --foreground: 0 0% 9%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.75rem;
+    --card-foreground: 0 0% 9%;
+    --primary: 0 0% 9%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 98%;
+    --muted-foreground: 0 0% 30%;
+    --accent: 0 0% 96%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 100% 47%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 92%;
+    --input: 0 0% 92%;
+    --ring: 212 100% 48%;
+    --radius: 0.5rem;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 0 0% 9%;
   }
 }
 
@@ -34,6 +34,9 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  h1, h2, h3, h4 {
+    letter-spacing: -0.02em;
   }
 }
 
@@ -50,6 +53,37 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .mesh-gradient {
+    background-image:
+      radial-gradient(at 15% 20%, rgba(0, 124, 240, 0.16) 0px, transparent 50%),
+      radial-gradient(at 85% 15%, rgba(121, 40, 202, 0.14) 0px, transparent 50%),
+      radial-gradient(at 75% 65%, rgba(255, 0, 128, 0.12) 0px, transparent 50%),
+      radial-gradient(at 20% 80%, rgba(0, 223, 216, 0.14) 0px, transparent 50%),
+      radial-gradient(at 60% 90%, rgba(249, 203, 40, 0.12) 0px, transparent 50%);
+  }
+
+  .grid-overlay {
+    background-image:
+      linear-gradient(to right, #0000000a 1px, transparent 1px),
+      linear-gradient(to bottom, #0000000a 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #f7f7f7 37%, #f0f0f0 63%);
+    background-size: 400% 100%;
+    animation: shimmer 1.4s ease infinite;
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
 }
 
 [data-radix-popper-content-wrapper] {
@@ -71,12 +105,12 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #d4d4d4;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #a1a1a1;
 }
 
 html {

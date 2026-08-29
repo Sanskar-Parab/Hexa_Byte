@@ -1,7 +1,7 @@
 import { Hero } from "@/components/landing/Hero";
 import { HowItWorks } from "@/components/landing/HowItWorks";
 import { Features } from "@/components/landing/Features";
-import { WhyPathPilot } from "@/components/landing/WhyPathPilot";
+import { WhyChooseUs } from "@/components/landing/WhyChooseUs";
 import { Footer } from "@/components/landing/Footer";
 
 export default function LandingPage() {
@@ -10,7 +10,7 @@ export default function LandingPage() {
       <Hero />
       <HowItWorks />
       <Features />
-      <WhyPathPilot />
+      <WhyChooseUs />
       <Footer />
     </main>
   );

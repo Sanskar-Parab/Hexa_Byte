@@ -33,14 +33,15 @@ export function JobAnalyzer({ onAnalysisComplete }: JobAnalyzerProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <ClipboardCheck className="h-5 w-5 text-blue-600" />
+        <CardTitle className="flex items-center gap-2 text-base font-semibold text-ink">
+          <ClipboardCheck className="h-4 w-4 text-mute" />
           Job Description Analyzer
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-sm text-slate-600">
-          Paste a job description below. We&apos;ll extract requirements and match them against your skills.
+        <p className="text-sm text-body">
+          Paste a job description below. We&apos;ll extract requirements and match them against your
+          real skill evidence.
         </p>
 
         <Textarea
@@ -63,18 +64,12 @@ Nice to have:
           value={description}
           onChange={(e) => { setDescription(e.target.value); setError(null); }}
           rows={12}
-          className="font-mono text-sm"
+          className="border-hairline font-mono text-sm"
         />
 
-        {error && (
-          <p className="text-sm text-rose-600 bg-rose-50 rounded-lg px-4 py-2">{error}</p>
-        )}
+        {error && <p className="rounded-lg bg-err-soft px-4 py-2 text-sm text-err-deep">{error}</p>}
 
-        <Button
-          onClick={handleAnalyze}
-          disabled={!description.trim() || analyzing}
-          className="w-full"
-        >
+        <Button onClick={handleAnalyze} disabled={!description.trim() || analyzing} className="w-full">
           {analyzing ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

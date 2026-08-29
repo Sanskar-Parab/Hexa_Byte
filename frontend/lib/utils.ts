@@ -23,29 +23,54 @@ export function getInitials(name: string): string {
 }
 
 export function getConfidenceColor(confidence: string): string {
-  switch (confidence) {
+  switch (confidence?.toLowerCase()) {
     case "high":
-      return "text-emerald-600 bg-emerald-50";
+      return "text-link bg-link-soft";
     case "medium":
-      return "text-amber-600 bg-amber-50";
+      return "text-warn-deep bg-warn-soft";
     case "low":
-      return "text-rose-600 bg-rose-50";
+      return "text-err-deep bg-err-soft";
     default:
-      return "text-slate-600 bg-slate-50";
+      return "text-body bg-canvas-soft2";
   }
 }
 
 export function getDifficultyColor(difficulty: string): string {
   switch (difficulty?.toUpperCase()) {
     case "BEGINNER":
-      return "bg-emerald-100 text-emerald-700";
+      return "bg-link-soft text-link-deep";
     case "INTERMEDIATE":
-      return "bg-amber-100 text-amber-700";
+      return "bg-warn-soft text-warn-deep";
     case "ADVANCED":
-      return "bg-rose-100 text-rose-700";
+      return "bg-err-soft text-err-deep";
     case "INDUSTRY":
-      return "bg-purple-100 text-purple-700";
+      return "bg-violet-soft text-violet-deep";
     default:
-      return "bg-slate-100 text-slate-700";
+      return "bg-canvas-soft2 text-body";
+  }
+}
+
+export function getStatusColor(status: string): string {
+  switch (status?.toLowerCase()) {
+    case "completed":
+      return "text-link bg-link-soft";
+    case "in_progress":
+      return "text-warn-deep bg-warn-soft";
+    case "not_started":
+    default:
+      return "text-mute bg-canvas-soft2";
+  }
+}
+
+export function formatStatusLabel(status: string): string {
+  switch (status?.toLowerCase()) {
+    case "completed":
+      return "Completed";
+    case "in_progress":
+      return "In Progress";
+    case "not_started":
+      return "Not Started";
+    default:
+      return status;
   }
 }

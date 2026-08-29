@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Map, Route } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Map } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
+import { LoadingState } from "@/components/ui/loading-state";
 import { RoadmapTimeline } from "@/components/roadmap/RoadmapTimeline";
 import { api } from "@/lib/api";
 import { Roadmap } from "@/types";
@@ -43,32 +43,23 @@ export default function RoadmapPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-      </div>
-    );
+    return <LoadingState message="Building your personalized path..." />;
   }
 
   if (!roadmap) {
     return (
-      <div className="text-center py-20">
-        <Map className="h-12 w-12 text-slate-300 mx-auto mb-3" />
-        <h2 className="text-xl font-semibold text-slate-900">No Roadmap Yet</h2>
-        <p className="text-slate-600 mt-2">
-          {selectedCareerId
-            ? "Generate your personalized learning roadmap from your selected career."
-            : "Select a career to generate your personalized learning roadmap."}
-        </p>
-        {selectedCareerId ? (
-          <Button onClick={() => router.push(`/careers/${selectedCareerId}`)} className="mt-4">
-            <Route className="mr-2 h-4 w-4" /> Go to Career Details
-          </Button>
-        ) : (
-          <Button onClick={() => router.push("/careers")} className="mt-4">
-            Browse Careers
-          </Button>
-        )}
+      <div className="mx-auto max-w-2xl py-10">
+        <EmptyState
+          icon={Map}
+          title="Your path starts here."
+          description={
+            selectedCareerId
+              ? "Generate your personalized learning roadmap from your selected career."
+              : "Choose a career and we'll build a roadmap around your current skills and gaps."
+          }
+          actionLabel={selectedCareerId ? "Go to Career Details" : "Explore Careers"}
+          actionHref={selectedCareerId ? `/careers/${selectedCareerId}` : "/careers"}
+        />
       </div>
     );
   }
@@ -81,35 +72,32 @@ export default function RoadmapPage() {
     : 0;
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="mx-auto max-w-3xl space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Learning Roadmap</h1>
-        <p className="text-slate-600 mt-1">
-          Your personalized path to <span className="font-medium text-blue-600">{roadmap.career_name}</span>
-        </p>
+        <p className="mb-2 font-mono text-xs uppercase tracking-wider text-mute">Roadmap</p>
+        <h1 className="text-2xl font-semibold tracking-tight text-ink sm:text-3xl">
+          Your Path to {roadmap.career_name}
+        </h1>
         {roadmap.summary && (
-          <p className="text-sm text-slate-500 mt-1">{roadmap.summary}</p>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-body">{roadmap.summary}</p>
         )}
       </div>
 
-      <Card>
-        <CardContent className="p-4 flex items-center justify-between">
-          <div>
-            <p className="text-sm text-slate-600">Progress</p>
-            <p className="text-lg font-bold text-slate-900">
-              {completedPhases}/{includedPhases.length} phases
-              {skippedCount > 0 && (
-                <span className="text-sm font-normal text-slate-500 ml-2">
-                  ({skippedCount} skipped)
-                </span>
-              )}
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="text-2xl font-bold text-blue-600">{progress}%</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex items-center justify-between rounded-xl border border-hairline bg-canvas p-5 shadow-card">
+        <div>
+          <p className="text-sm text-body">Phases complete</p>
+          <p className="mt-1 text-lg font-semibold text-ink">
+            {completedPhases}/{includedPhases.length}
+            {skippedCount > 0 && (
+              <span className="ml-2 text-sm font-normal text-mute">({skippedCount} skipped)</span>
+            )}
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="text-3xl font-semibold tracking-tight text-ink">{progress}%</p>
+          <p className="text-xs text-mute">Ready</p>
+        </div>
+      </div>
 
       <RoadmapTimeline phases={roadmap.phases} onUpdateStatus={handleUpdateStatus} />
     </div>

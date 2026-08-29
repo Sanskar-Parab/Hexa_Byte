@@ -5,6 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Loader2, Route } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CareerDetail } from "@/components/career/CareerDetail";
+import { LoadingState } from "@/components/ui/loading-state";
+import { EmptyState } from "@/components/ui/empty-state";
 import { api } from "@/lib/api";
 
 export default function CareerDetailPage() {
@@ -54,34 +56,28 @@ export default function CareerDetailPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-      </div>
-    );
+    return <LoadingState message="Loading career intelligence..." />;
   }
 
   if (error) {
     return (
-      <div className="text-center py-20">
-        <h2 className="text-xl font-semibold text-slate-900">Unable to load career details</h2>
-        <p className="text-slate-600 mt-2">{error}</p>
-        <Button variant="ghost" onClick={() => router.push("/careers")} className="mt-4">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Careers
-        </Button>
-      </div>
+      <EmptyState
+        title="Something went wrong."
+        description={error}
+        actionLabel="Back to Careers"
+        onAction={() => router.push("/careers")}
+      />
     );
   }
 
   if (!careerInfo && !recommendation) {
     return (
-      <div className="text-center py-20">
-        <h2 className="text-xl font-semibold text-slate-900">Career not found</h2>
-        <p className="text-slate-600 mt-2">This career may no longer exist.</p>
-        <Button variant="ghost" onClick={() => router.push("/careers")} className="mt-4">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Careers
-        </Button>
-      </div>
+      <EmptyState
+        title="Career not found"
+        description="This career may no longer exist."
+        actionLabel="Back to Careers"
+        onAction={() => router.push("/careers")}
+      />
     );
   }
 
@@ -105,7 +101,7 @@ export default function CareerDetailPage() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      <Button variant="ghost" onClick={() => router.push("/careers")} className="mb-2">
+      <Button variant="ghost" onClick={() => router.push("/careers")} className="-ml-3">
         <ArrowLeft className="mr-2 h-4 w-4" /> Back to Careers
       </Button>
 
@@ -116,9 +112,8 @@ export default function CareerDetailPage() {
       />
 
       <div className="flex gap-3">
-        <Button onClick={handleGenerateRoadmap} disabled={generating}>
-          {generating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          <Route className="mr-2 h-4 w-4" />
+        <Button size="lg" onClick={handleGenerateRoadmap} disabled={generating}>
+          {generating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Route className="mr-2 h-4 w-4" />}
           Build My Personalized Roadmap
         </Button>
       </div>

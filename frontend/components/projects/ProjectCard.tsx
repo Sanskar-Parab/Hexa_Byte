@@ -1,23 +1,23 @@
 "use client";
 
-import { Clock, BarChart2, Play, CheckCircle2, RotateCcw } from "lucide-react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Clock, Sparkles, Play, CheckCircle2, Circle, Target } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getDifficultyColor } from "@/lib/utils";
 import { api } from "@/lib/api";
-import { useState } from "react";
 
 interface ProjectCardProps {
   project: any;
   onUpdate?: () => void;
 }
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any }> = {
-  recommended: { label: "Not Started", color: "bg-slate-100 text-slate-700", icon: RotateCcw },
-  in_progress: { label: "In Progress", color: "bg-blue-100 text-blue-700", icon: Play },
-  completed: { label: "Completed", color: "bg-emerald-100 text-emerald-700", icon: CheckCircle2 },
+const STATUS_CONFIG: Record<string, { label: string; className: string; icon: typeof Circle }> = {
+  recommended: { label: "Not Started", className: "bg-canvas-soft2 text-mute", icon: Circle },
+  in_progress: { label: "In Progress", className: "bg-warn-soft text-warn-deep", icon: Play },
+  completed: { label: "Completed", className: "bg-link-soft text-link-deep", icon: CheckCircle2 },
 };
 
 export function ProjectCard({ project, onUpdate }: ProjectCardProps) {
@@ -28,6 +28,12 @@ export function ProjectCard({ project, onUpdate }: ProjectCardProps) {
   const status = project.status || "recommended";
   const projectId = project.id || project.project?.id;
   const isAI = project.is_ai_generated || project.type === "ai_generated";
+  const skills: string[] = p.skills_developed || project.skills_targeted || project.covers_skills || [];
+  const whyThisProject: string | undefined =
+    project.why_this_project ||
+    (project.gap_skills_covered?.length
+      ? `Closes your gap in ${project.gap_skills_covered.slice(0, 2).join(" and ")}.`
+      : undefined);
 
   const statusConfig = STATUS_CONFIG[status] || STATUS_CONFIG.recommended;
   const StatusIcon = statusConfig.icon;
@@ -52,87 +58,77 @@ export function ProjectCard({ project, onUpdate }: ProjectCardProps) {
 
   return (
     <Card
-      className="group relative z-0 hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 cursor-pointer"
+      className="group relative z-0 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-card-hover"
       onClick={handleClick}
     >
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between mb-3">
-          <h3 className="text-lg font-semibold text-slate-900 group-hover:text-blue-700 transition-colors line-clamp-1">
+      <CardContent className="flex h-full flex-col p-6">
+        <div className="flex items-start justify-between gap-2 mb-3">
+          <h3 className="line-clamp-1 text-lg font-semibold tracking-tight text-ink transition-colors group-hover:text-link">
             {p.title}
           </h3>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             {isAI && (
-              <Badge className="bg-amber-100 text-amber-700 text-xs">AI</Badge>
+              <Badge variant="violet" className="text-[10px] font-mono uppercase tracking-wide">
+                <Sparkles className="h-3 w-3" /> AI
+              </Badge>
             )}
-            <Badge className={getDifficultyColor(p.difficulty)}>
-              {p.difficulty}
-            </Badge>
+            <Badge className={getDifficultyColor(p.difficulty)}>{p.difficulty}</Badge>
           </div>
         </div>
 
-        <p className="text-sm text-slate-600 leading-relaxed mb-4 line-clamp-2">
-          {p.description}
-        </p>
+        <p className="mb-4 line-clamp-2 text-sm leading-relaxed text-body">{p.description}</p>
 
-        <div className="flex flex-wrap gap-2 mb-4">
-          {(p.skills_developed || project.skills_targeted || []).slice(0, 4).map((skill: string) => (
-            <Badge key={skill} variant="secondary" className="text-xs">
-              {skill}
-            </Badge>
-          ))}
-          {(p.skills_developed || project.skills_targeted || []).length > 4 && (
-            <Badge variant="secondary" className="text-xs">
-              +{(p.skills_developed || project.skills_targeted || []).length - 4} more
-            </Badge>
-          )}
-        </div>
-
-        <div className="flex items-center gap-4 text-xs text-slate-500 mb-4">
-          <div className="flex items-center gap-1.5">
-            <Clock className="h-3.5 w-3.5" />
-            <span>{p.estimated_duration_weeks ? `${p.estimated_duration_weeks} weeks` : project.duration || "N/A"}</span>
-          </div>
-          {p.portfolio_value && (
-            <div className="flex items-center gap-1.5">
-              <BarChart2 className="h-3.5 w-3.5" />
-              <span>{p.portfolio_value}</span>
-            </div>
-          )}
-        </div>
-
-        {matchPercent > 0 && (
+        {skills.length > 0 && (
           <div className="mb-4">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-slate-500">Relevance</span>
-              <span className="font-semibold text-blue-600">{matchPercent}%</span>
+            <p className="mb-1.5 font-mono text-[10px] uppercase tracking-wide text-mute">Targets</p>
+            <div className="flex flex-wrap gap-1.5">
+              {skills.slice(0, 4).map((skill: string) => (
+                <Badge key={skill} variant="secondary" className="text-xs">
+                  {skill}
+                </Badge>
+              ))}
+              {skills.length > 4 && (
+                <Badge variant="secondary" className="text-xs">
+                  +{skills.length - 4} more
+                </Badge>
+              )}
             </div>
           </div>
         )}
 
-        <div className="pt-3 border-t flex items-center justify-between">
-          <Badge className={statusConfig.color}>
-            <StatusIcon className="h-3 w-3 mr-1" />
+        {whyThisProject && (
+          <div className="mb-4 flex items-start gap-2 rounded-lg bg-canvas-soft px-3 py-2">
+            <Target className="mt-0.5 h-3.5 w-3.5 shrink-0 text-link" />
+            <p className="text-xs leading-relaxed text-body">{whyThisProject}</p>
+          </div>
+        )}
+
+        <div className="mb-4 flex items-center gap-4 text-xs text-mute">
+          <div className="flex items-center gap-1.5">
+            <Clock className="h-3.5 w-3.5" />
+            <span>{p.estimated_duration_weeks ? `${p.estimated_duration_weeks} weeks` : project.duration || "N/A"}</span>
+          </div>
+          {matchPercent > 0 && (
+            <div className="flex items-center gap-1.5">
+              <span className="font-semibold text-link">{matchPercent}%</span>
+              <span>relevance</span>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-auto flex items-center justify-between border-t border-hairline pt-3">
+          <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${statusConfig.className}`}>
+            <StatusIcon className="h-3 w-3" />
             {statusConfig.label}
-          </Badge>
+          </span>
           <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
             {status === "recommended" && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 text-xs"
-                onClick={(e) => handleStatusChange(e, "in_progress")}
-                disabled={updating}
-              >
-                <Play className="h-3 w-3 mr-1" /> Start
+              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={(e) => handleStatusChange(e, "in_progress")} disabled={updating}>
+                <Play className="h-3 w-3 mr-1" /> Start Project
               </Button>
             )}
             {status === "in_progress" && (
-              <Button
-                size="sm"
-                className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700"
-                onClick={(e) => handleStatusChange(e, "completed")}
-                disabled={updating}
-              >
+              <Button size="sm" className="h-7 text-xs" onClick={(e) => handleStatusChange(e, "completed")} disabled={updating}>
                 <CheckCircle2 className="h-3 w-3 mr-1" /> Complete
               </Button>
             )}

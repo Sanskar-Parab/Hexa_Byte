@@ -11,10 +11,13 @@ import {
   RotateCcw,
   CheckCircle,
   ArrowRight,
+  Target,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
+import { SkeletonBlock } from "@/components/ui/loading-state";
 import { api } from "@/lib/api";
 import { NextBestAction } from "@/types";
 
@@ -26,6 +29,16 @@ const ACTION_ICONS: Record<string, React.ReactNode> = {
   UPLOAD_RESUME: <FileText className="h-5 w-5" />,
   ANALYZE_JOB: <Search className="h-5 w-5" />,
   RETAKE_ASSESSMENT: <RotateCcw className="h-5 w-5" />,
+};
+
+const ACTION_LABELS: Record<string, string> = {
+  ASSESS_SKILL: "Assess This Skill",
+  START_PHASE: "Start Phase",
+  COMPLETE_PHASE: "Go to Roadmap",
+  BUILD_PROJECT: "Start Project",
+  UPLOAD_RESUME: "Upload Resume",
+  ANALYZE_JOB: "Analyze a Job",
+  RETAKE_ASSESSMENT: "Retake Assessment",
 };
 
 const ACTION_ROUTES: Record<string, (careerId?: string | null) => string> = {
@@ -58,12 +71,13 @@ export function NextBestActionCard({ careerId }: NextBestActionCardProps) {
   if (loading) {
     return (
       <Card>
-        <CardContent className="p-6">
-          <div className="animate-pulse flex space-x-4">
-            <div className="rounded-full bg-slate-200 h-12 w-12" />
-            <div className="flex-1 space-y-2">
-              <div className="h-4 bg-slate-200 rounded w-1/3" />
-              <div className="h-3 bg-slate-200 rounded w-2/3" />
+        <CardContent className="p-6 sm:p-8">
+          <div className="flex gap-4">
+            <SkeletonBlock className="h-12 w-12 shrink-0 rounded-full" />
+            <div className="flex-1 space-y-3">
+              <SkeletonBlock className="h-3 w-32" />
+              <SkeletonBlock className="h-5 w-2/3" />
+              <SkeletonBlock className="h-3 w-full" />
             </div>
           </div>
         </CardContent>
@@ -72,10 +86,19 @@ export function NextBestActionCard({ careerId }: NextBestActionCardProps) {
   }
 
   if (!action || !action.action) {
-    return null;
+    return (
+      <EmptyState
+        icon={Target}
+        title="Your path starts here."
+        description="Choose a target career and we'll build a roadmap around your current skills and gaps."
+        actionLabel="Explore Careers"
+        actionHref="/careers"
+      />
+    );
   }
 
   const icon = ACTION_ICONS[action.action] || <Zap className="h-5 w-5" />;
+  const label = ACTION_LABELS[action.action] || "Take Action";
   const routeFn = ACTION_ROUTES[action.action];
 
   const handleAction = () => {
@@ -85,15 +108,15 @@ export function NextBestActionCard({ careerId }: NextBestActionCardProps) {
   };
 
   return (
-    <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
-      <CardContent className="p-6">
-        <div className="flex items-start gap-4">
-          <div className="flex-shrink-0 p-3 rounded-full bg-blue-100 text-blue-700">
+    <Card className="overflow-hidden border-hairline">
+      <CardContent className="p-6 sm:p-8">
+        <div className="flex items-start gap-4 sm:gap-5">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-ink text-white">
             {icon}
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-mono text-xs uppercase tracking-wider text-mute">
                 Next Best Action
               </span>
               {action.career_name && (
@@ -102,31 +125,30 @@ export function NextBestActionCard({ careerId }: NextBestActionCardProps) {
                 </Badge>
               )}
             </div>
-            <h3 className="text-lg font-bold text-slate-900 mb-1">
+            <h3 className="mt-1.5 text-xl font-semibold tracking-tight text-ink">
               {action.title}
             </h3>
-            <p className="text-sm text-slate-600 mb-3">{action.why}</p>
+            <p className="mt-1.5 text-sm leading-relaxed text-body">
+              <span className="font-medium text-ink">Why this? </span>
+              {action.why}
+            </p>
 
             {action.current && action.target && (
-              <div className="flex items-center gap-3 mb-3">
-                <div className="text-xs">
-                  <span className="text-slate-500">Current: </span>
-                  <span className="font-semibold text-slate-700">
-                    {action.current}
-                  </span>
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <div className="rounded-lg bg-canvas-soft2 px-3 py-1.5 text-xs">
+                  <span className="text-mute">Current: </span>
+                  <span className="font-semibold text-ink">{action.current}</span>
                 </div>
-                <ArrowRight className="h-3 w-3 text-slate-400" />
-                <div className="text-xs">
-                  <span className="text-slate-500">Target: </span>
-                  <span className="font-semibold text-blue-700">
-                    {action.target}
-                  </span>
+                <ArrowRight className="h-3.5 w-3.5 text-mute" />
+                <div className="rounded-lg bg-link-soft px-3 py-1.5 text-xs">
+                  <span className="text-link-deep/70">Target: </span>
+                  <span className="font-semibold text-link-deep">{action.target}</span>
                 </div>
               </div>
             )}
 
-            <Button onClick={handleAction} size="sm" className="mt-1">
-              Start Assessment
+            <Button onClick={handleAction} className="mt-5">
+              {label}
               <ArrowRight className="ml-2 h-3.5 w-3.5" />
             </Button>
           </div>

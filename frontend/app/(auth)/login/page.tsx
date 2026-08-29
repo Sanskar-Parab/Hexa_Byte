@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Compass, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Logo } from "@/components/layout/Logo";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function LoginPage() {
@@ -43,31 +44,26 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-blue-50 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-canvas-soft px-4 py-12">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2.5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-emerald-500">
-              <Compass className="h-6 w-6 text-white" />
-            </div>
-            <span className="text-2xl font-bold text-slate-900">
-              Path<span className="text-blue-600">Pilot</span>
-            </span>
+        <div className="mb-8 flex justify-center">
+          <Link href="/">
+            <Logo size="lg" />
           </Link>
         </div>
 
-        <Card className="shadow-xl shadow-slate-200/50">
+        <Card className="shadow-panel">
           <CardHeader className="text-center">
             <CardTitle className="text-xl">Welcome back</CardTitle>
-            <CardDescription>Sign in to continue your career journey</CardDescription>
+            <CardDescription>Sign in to continue toward your next move.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
-                <div className="rounded-lg bg-rose-50 p-3 text-sm text-rose-600">{error}</div>
+                <div className="rounded-lg bg-err-soft p-3 text-sm text-err-deep">{error}</div>
               )}
               <div>
-                <label className="text-sm font-medium text-slate-700 mb-1 block">Email</label>
+                <label className="mb-1.5 block text-sm font-medium text-body">Email</label>
                 <Input
                   type="email"
                   placeholder="you@example.com"
@@ -77,7 +73,7 @@ export default function LoginPage() {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-700 mb-1 block">Password</label>
+                <label className="mb-1.5 block text-sm font-medium text-body">Password</label>
                 <Input
                   type="password"
                   placeholder="Enter your password"
@@ -94,10 +90,10 @@ export default function LoginPage() {
 
             <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t" />
+                <div className="w-full border-t border-hairline" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-2 text-slate-400">or</span>
+                <span className="bg-canvas px-2 text-mute">or</span>
               </div>
             </div>
 
@@ -105,9 +101,9 @@ export default function LoginPage() {
               Try Demo Mode
             </Button>
 
-            <p className="mt-6 text-center text-sm text-slate-600">
+            <p className="mt-6 text-center text-sm text-body">
               Don&apos;t have an account?{" "}
-              <Link href="/register" className="font-medium text-blue-600 hover:underline">
+              <Link href="/register" className="font-medium text-link hover:underline">
                 Get started
               </Link>
             </p>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Fragment } from "react";
 import { Send, Bot, User, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,23 +17,52 @@ interface ChatInterfaceProps {
     response: string;
     suggestions: string[];
   }>;
-  contextAware?: boolean;
+  focusSkill?: string | null;
 }
 
-const defaultQuickQuestions = [
-  "What should I learn next?",
-  "What's my biggest skill gap?",
-  "How am I progressing?",
-  "What project should I build?",
-];
+function getStarterQuestions(focusSkill?: string | null) {
+  return [
+    "What should I learn next?",
+    "Why am I not ready yet?",
+    "Which project should I build?",
+    focusSkill ? `How can I improve my ${focusSkill}?` : "How can I improve my core skills?",
+    "Am I ready for this career?",
+  ];
+}
 
-export function ChatInterface({ onAsk, contextAware = true }: ChatInterfaceProps) {
+// Renders **bold** segments from plain-text coach responses without assuming any other structure.
+function RichText({ text }: { text: string }) {
+  const lines = text.split("\n");
+  return (
+    <>
+      {lines.map((line, i) => {
+        const parts = line.split(/(\*\*[^*]+\*\*)/g).filter(Boolean);
+        return (
+          <Fragment key={i}>
+            {parts.map((part, j) =>
+              part.startsWith("**") && part.endsWith("**") ? (
+                <strong key={j} className="font-semibold text-ink">
+                  {part.slice(2, -2)}
+                </strong>
+              ) : (
+                <Fragment key={j}>{part}</Fragment>
+              )
+            )}
+            {i < lines.length - 1 && <br />}
+          </Fragment>
+        );
+      })}
+    </>
+  );
+}
+
+export function ChatInterface({ onAsk, focusSkill }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
       content:
-        "Hi! I'm your AI Career Coach. I use your actual skill data, career goals, and roadmap to give you personalized guidance. Ask me anything about your career path.",
-      suggestions: defaultQuickQuestions,
+        "Hi, I'm your AI Career Coach. I use your actual skill evidence, target career, and roadmap progress to give you grounded, specific guidance — not generic advice.",
+      suggestions: getStarterQuestions(focusSkill),
     },
   ]);
   const [input, setInput] = useState("");
@@ -42,7 +71,7 @@ export function ChatInterface({ onAsk, contextAware = true }: ChatInterfaceProps
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, loading]);
 
   const handleSend = async (question?: string) => {
     const q = question || input.trim();
@@ -67,8 +96,7 @@ export function ChatInterface({ onAsk, contextAware = true }: ChatInterfaceProps
         ...prev,
         {
           role: "assistant",
-          content:
-            "Sorry, I couldn't process that. Please try again.",
+          content: "Sorry, I couldn't process that. Please try again.",
         },
       ]);
     } finally {
@@ -77,31 +105,25 @@ export function ChatInterface({ onAsk, contextAware = true }: ChatInterfaceProps
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-200px)] min-h-[400px]">
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+    <div className="flex h-[calc(100vh-320px)] min-h-[440px] flex-col rounded-xl border border-hairline bg-canvas shadow-card">
+      <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
         {messages.map((msg, i) => (
-          <div
-            key={i}
-            className={cn(
-              "flex gap-3",
-              msg.role === "user" ? "justify-end" : ""
-            )}
-          >
+          <div key={i} className={cn("flex items-start gap-2.5 sm:gap-3", msg.role === "user" && "justify-end")}>
             {msg.role === "assistant" && (
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100">
-                <Bot className="h-4 w-4 text-blue-600" />
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-canvas-soft2">
+                <Bot className="h-4 w-4 text-ink" />
               </div>
             )}
             <div
               className={cn(
-                "max-w-[75%] rounded-2xl px-4 py-3",
+                "max-w-[85%] sm:max-w-[75%] rounded-2xl px-4 py-3",
                 msg.role === "user"
-                  ? "bg-blue-600 text-white rounded-br-md"
-                  : "bg-slate-100 text-slate-900 rounded-bl-md"
+                  ? "rounded-br-md bg-ink text-white"
+                  : "rounded-bl-md border border-hairline bg-canvas-soft text-ink"
               )}
             >
-              <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                {msg.content}
+              <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">
+                <RichText text={msg.content} />
               </p>
               {msg.suggestions && msg.suggestions.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -109,7 +131,7 @@ export function ChatInterface({ onAsk, contextAware = true }: ChatInterfaceProps
                     <button
                       key={j}
                       onClick={() => handleSend(s)}
-                      className="rounded-full bg-white border px-3 py-1 text-xs text-slate-600 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 transition-colors"
+                      className="rounded-full border border-hairline bg-canvas px-3 py-1 text-xs text-body transition-colors hover:border-ink/20 hover:bg-canvas-soft2 hover:text-ink"
                     >
                       {s}
                     </button>
@@ -118,23 +140,21 @@ export function ChatInterface({ onAsk, contextAware = true }: ChatInterfaceProps
               )}
             </div>
             {msg.role === "user" && (
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-200">
-                <User className="h-4 w-4 text-slate-600" />
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-canvas-soft2">
+                <User className="h-4 w-4 text-body" />
               </div>
             )}
           </div>
         ))}
         {loading && (
-          <div className="flex gap-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100">
-              <Bot className="h-4 w-4 text-blue-600" />
+          <div className="flex items-start gap-2.5 sm:gap-3">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-canvas-soft2">
+              <Bot className="h-4 w-4 text-ink" />
             </div>
-            <div className="bg-slate-100 rounded-2xl rounded-bl-md px-4 py-3">
-              <div className="flex items-center gap-1">
-                <Sparkles className="h-4 w-4 text-blue-500 animate-pulse" />
-                <span className="text-sm text-slate-500">
-                  Analyzing your data...
-                </span>
+            <div className="rounded-2xl rounded-bl-md border border-hairline bg-canvas-soft px-4 py-3">
+              <div className="flex items-center gap-1.5">
+                <Sparkles className="h-4 w-4 animate-pulse text-link" />
+                <span className="text-sm text-mute">Thinking through your data...</span>
               </div>
             </div>
           </div>
@@ -142,7 +162,7 @@ export function ChatInterface({ onAsk, contextAware = true }: ChatInterfaceProps
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="border-t bg-white p-4">
+      <div className="border-t border-hairline bg-canvas p-3 sm:p-4">
         <div className="flex gap-2">
           <Textarea
             placeholder="Ask your career coach..."
@@ -154,14 +174,10 @@ export function ChatInterface({ onAsk, contextAware = true }: ChatInterfaceProps
                 handleSend();
               }
             }}
-            className="min-h-[44px] max-h-32 resize-none"
+            className="min-h-[44px] max-h-32 resize-none border-hairline"
             rows={1}
           />
-          <Button
-            onClick={() => handleSend()}
-            disabled={!input.trim() || loading}
-            className="shrink-0"
-          >
+          <Button onClick={() => handleSend()} disabled={!input.trim() || loading} className="shrink-0">
             <Send className="h-4 w-4" />
           </Button>
         </div>

@@ -11,6 +11,12 @@ import { SkillSelector } from "@/components/skills/SkillSelector";
 
 const steps = ["Basic Info", "Experience", "Interests", "Skills"];
 
+const selectClass =
+  "w-full rounded-lg border border-hairline bg-canvas px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-ring";
+const textareaClass =
+  "w-full min-h-[90px] rounded-lg border border-hairline bg-canvas px-3 py-2 text-sm text-ink placeholder:text-mute focus:outline-none focus:ring-2 focus:ring-ring";
+const labelClass = "mb-1.5 block text-sm font-medium text-body";
+
 export default function OnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState(0);
@@ -83,42 +89,53 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="mx-auto max-w-2xl space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Profile Setup</h1>
-        <p className="text-slate-600 mt-1">Tell us about yourself to get personalized recommendations.</p>
+        <p className="mb-2 font-mono text-xs uppercase tracking-wider text-mute">Get set up</p>
+        <h1 className="text-2xl font-semibold tracking-tight text-ink sm:text-3xl">Profile setup</h1>
+        <p className="mt-1.5 text-sm text-body">
+          Tell us about yourself so Next Path AI can build recommendations around real context, not guesses.
+        </p>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center">
         {steps.map((s, i) => (
-          <div key={s} className="flex items-center gap-2">
-            <div
-              className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
-                i < step ? "bg-emerald-500 text-white" : i === step ? "bg-blue-600 text-white" : "bg-slate-200 text-slate-500"
-              }`}
-            >
-              {i < step ? <Check className="h-4 w-4" /> : i + 1}
+          <div key={s} className="flex flex-1 items-center last:flex-none">
+            <div className="flex flex-col items-center gap-2">
+              <div
+                className={`flex h-9 w-9 items-center justify-center rounded-full font-mono text-xs font-medium transition-colors ${
+                  i < step
+                    ? "bg-ink text-white"
+                    : i === step
+                    ? "bg-ink text-white ring-4 ring-canvas-soft2"
+                    : "bg-canvas-soft2 text-mute"
+                }`}
+              >
+                {i < step ? <Check className="h-4 w-4" /> : String(i + 1).padStart(2, "0")}
+              </div>
+              <span className={`hidden text-xs font-medium sm:block ${i === step ? "text-ink" : "text-mute"}`}>
+                {s}
+              </span>
             </div>
-            <span className={`text-sm hidden sm:block ${i === step ? "text-slate-900 font-medium" : "text-slate-400"}`}>
-              {s}
-            </span>
-            {i < steps.length - 1 && <div className="w-8 h-0.5 bg-slate-200 hidden sm:block" />}
+            {i < steps.length - 1 && (
+              <div className={`mx-2 h-px flex-1 ${i < step ? "bg-ink" : "bg-hairline"}`} />
+            )}
           </div>
         ))}
       </div>
 
-      <Card>
-        <CardContent className="p-6">
+      <Card className="shadow-panel">
+        <CardContent className="p-6 sm:p-8">
           {step === 0 && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Basic Information</h3>
-              <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-5">
+              <h3 className="text-lg font-semibold text-ink">Basic information</h3>
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="text-sm font-medium text-slate-700 mb-1 block">Age Group</label>
+                  <label className={labelClass}>Age Group</label>
                   <select
                     value={profile.age_group}
                     onChange={(e) => setProfile({ ...profile, age_group: e.target.value })}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    className={selectClass}
                   >
                     <option value="">Select...</option>
                     <option value="14-17">14-17</option>
@@ -128,11 +145,11 @@ export default function OnboardingPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-slate-700 mb-1 block">Education Level</label>
+                  <label className={labelClass}>Education Level</label>
                   <select
                     value={profile.education_level}
                     onChange={(e) => setProfile({ ...profile, education_level: e.target.value })}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    className={selectClass}
                   >
                     <option value="">Select...</option>
                     <option value="High School">High School</option>
@@ -143,9 +160,9 @@ export default function OnboardingPage() {
                   </select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="text-sm font-medium text-slate-700 mb-1 block">Degree / Program</label>
+                  <label className={labelClass}>Degree / Program</label>
                   <Input
                     value={profile.degree}
                     onChange={(e) => setProfile({ ...profile, degree: e.target.value })}
@@ -153,7 +170,7 @@ export default function OnboardingPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-slate-700 mb-1 block">Branch / Field</label>
+                  <label className={labelClass}>Branch / Field</label>
                   <Input
                     value={profile.branch}
                     onChange={(e) => setProfile({ ...profile, branch: e.target.value })}
@@ -162,11 +179,11 @@ export default function OnboardingPage() {
                 </div>
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-700 mb-1 block">Current Year</label>
+                <label className={labelClass}>Current Year</label>
                 <select
                   value={profile.current_year}
                   onChange={(e) => setProfile({ ...profile, current_year: e.target.value })}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  className={selectClass}
                 >
                   <option value="">Select...</option>
                   <option value="1st Year">1st Year</option>
@@ -180,39 +197,37 @@ export default function OnboardingPage() {
           )}
 
           {step === 1 && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Experience</h3>
+            <div className="space-y-5">
+              <h3 className="text-lg font-semibold text-ink">Experience</h3>
               <div>
-                <label className="text-sm font-medium text-slate-700 mb-1 block">Internship Experience</label>
+                <label className={labelClass}>Internship Experience</label>
                 <textarea
                   value={profile.internship_experience}
                   onChange={(e) => setProfile({ ...profile, internship_experience: e.target.value })}
                   placeholder="Describe any internships you've completed..."
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[80px]"
+                  className={textareaClass}
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-700 mb-1 block">Work Experience</label>
+                <label className={labelClass}>Work Experience</label>
                 <textarea
                   value={profile.work_experience}
                   onChange={(e) => setProfile({ ...profile, work_experience: e.target.value })}
                   placeholder="Describe any work experience..."
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[80px]"
+                  className={textareaClass}
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-700 mb-1 block">
-                  Number of Projects: {profile.projects_count}
-                </label>
+                <label className={labelClass}>Number of Projects: {profile.projects_count}</label>
                 <input
                   type="range"
                   min={0}
                   max={20}
                   value={profile.projects_count}
                   onChange={(e) => setProfile({ ...profile, projects_count: Number(e.target.value) })}
-                  className="w-full"
+                  className="w-full accent-ink"
                 />
-                <div className="flex justify-between text-xs text-slate-500 mt-1">
+                <div className="mt-1 flex justify-between text-xs text-mute">
                   <span>0</span>
                   <span>20+</span>
                 </div>
@@ -222,8 +237,8 @@ export default function OnboardingPage() {
 
           {step === 2 && (
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Interests</h3>
-              <p className="text-sm text-slate-600">Select areas that interest you:</p>
+              <h3 className="text-lg font-semibold text-ink">Interests</h3>
+              <p className="text-sm text-body">Select areas that interest you:</p>
               <div className="flex flex-wrap gap-2">
                 {allInterests.map((interest) => {
                   const selected = selectedInterests.includes(interest.id);
@@ -233,8 +248,8 @@ export default function OnboardingPage() {
                       onClick={() => handleToggleInterest(interest.id)}
                       className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
                         selected
-                          ? "bg-blue-100 border-blue-300 text-blue-700"
-                          : "border-slate-200 text-slate-600 hover:border-blue-300 hover:bg-blue-50"
+                          ? "border-ink bg-ink text-white"
+                          : "border-hairline text-body hover:border-hairline-strong hover:bg-canvas-soft"
                       }`}
                     >
                       {interest.name}
@@ -243,15 +258,15 @@ export default function OnboardingPage() {
                 })}
               </div>
               {selectedInterests.length > 0 && (
-                <p className="text-sm text-slate-500">{selectedInterests.length} interests selected</p>
+                <p className="text-sm text-mute">{selectedInterests.length} interests selected</p>
               )}
             </div>
           )}
 
           {step === 3 && (
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Skills</h3>
-              <p className="text-sm text-slate-600">Add your current skills and rate your proficiency:</p>
+              <h3 className="text-lg font-semibold text-ink">Skills</h3>
+              <p className="text-sm text-body">Add your current skills and rate your proficiency:</p>
               <SkillSelector
                 availableSkills={allSkills}
                 selectedSkills={selectedSkills.map((s) => ({

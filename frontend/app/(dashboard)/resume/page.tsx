@@ -3,7 +3,9 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, History, Trash2 } from "lucide-react";
+import { SectionHeader } from "@/components/ui/section-header";
+import { LoadingState } from "@/components/ui/loading-state";
+import { FileText, History, Trash2, Info } from "lucide-react";
 import { api } from "@/lib/api";
 import { ResumeUploader } from "@/components/resume/ResumeUploader";
 import { ResumeResults } from "@/components/resume/ResumeResults";
@@ -39,29 +41,22 @@ export default function ResumePage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-          <FileText className="h-6 w-6 text-blue-600" />
-          Resume Intelligence
-        </h1>
-        <p className="text-slate-600 mt-1">
-          Upload your resume to extract skills and create evidence records.
+    <div className="mx-auto max-w-3xl space-y-6">
+      <SectionHeader
+        eyebrow="Resume"
+        title="Resume Intelligence"
+        description="Upload your resume to extract skills, projects, and experience — and turn them into evidence."
+      />
+
+      <div className="flex items-start gap-3 rounded-xl border border-warn/30 bg-warn-soft p-4">
+        <Info className="mt-0.5 h-4 w-4 shrink-0 text-warn-deep" />
+        <p className="text-sm text-warn-deep">
+          Resume mentions are <strong>evidence</strong>, not proof of expert proficiency. Extracted
+          skills are linked with MEDIUM confidence.
         </p>
       </div>
 
-      <Card className="border-amber-200 bg-amber-50">
-        <CardContent className="p-4">
-          <p className="text-sm text-amber-800">
-            <strong>Important:</strong> Resume mentions are <strong>evidence</strong>, not proof
-            of expert proficiency. Extracted skills are linked with MEDIUM confidence.
-          </p>
-        </CardContent>
-      </Card>
-
-      {!uploadResult && (
-        <ResumeUploader onUploadComplete={setUploadResult} />
-      )}
+      {!uploadResult && <ResumeUploader onUploadComplete={setUploadResult} />}
 
       {uploadResult && (
         <div className="space-y-4">
@@ -78,26 +73,28 @@ export default function ResumePage() {
         </div>
       )}
 
-      {resumes.length > 0 && !uploadResult && (
+      {loading && <LoadingState message="Loading your resumes..." />}
+
+      {!loading && resumes.length > 0 && !uploadResult && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <History className="h-5 w-5 text-slate-500" />
+            <CardTitle className="flex items-center gap-2 text-base font-semibold text-ink">
+              <History className="h-4 w-4 text-mute" />
               Previous Uploads
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
+            <div className="space-y-2">
               {resumes.map((resume) => (
                 <div
                   key={resume.id}
-                  className="flex items-center justify-between p-3 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors"
+                  className="flex items-center justify-between rounded-lg border border-hairline bg-canvas-soft p-3 transition-colors hover:bg-canvas-soft2"
                 >
                   <div className="flex items-center gap-3">
-                    <FileText className="h-5 w-5 text-slate-400" />
+                    <FileText className="h-5 w-5 text-mute" />
                     <div>
-                      <p className="font-medium text-sm text-slate-800">{resume.filename}</p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-sm font-medium text-ink">{resume.filename}</p>
+                      <p className="text-xs text-mute">
                         {resume.matched_skills.length} skills detected
                         {" · "}
                         {new Date(resume.created_at).toLocaleDateString()}
@@ -108,7 +105,7 @@ export default function ResumePage() {
                     variant="ghost"
                     size="sm"
                     onClick={() => handleDelete(resume.id)}
-                    className="text-slate-400 hover:text-rose-600"
+                    className="text-mute hover:text-err"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -117,10 +114,6 @@ export default function ResumePage() {
             </div>
           </CardContent>
         </Card>
-      )}
-
-      {loading && (
-        <div className="text-center text-slate-500 py-8">Loading...</div>
       )}
     </div>
   );

@@ -12,9 +12,9 @@ export function WeeklyActions({ actions }: WeeklyActionsProps) {
     return (
       <Card>
         <CardContent className="p-8 text-center">
-          <CheckSquare className="h-12 w-12 text-slate-300 mx-auto mb-3" />
-          <h3 className="text-lg font-semibold text-slate-900 mb-1">All Caught Up</h3>
-          <p className="text-sm text-slate-500">No pending actions for this week.</p>
+          <CheckSquare className="mx-auto mb-3 h-10 w-10 text-hairline-strong" />
+          <h3 className="mb-1 text-base font-semibold text-ink">All caught up</h3>
+          <p className="text-sm text-body">No pending actions for this week.</p>
         </CardContent>
       </Card>
     );
@@ -23,21 +23,21 @@ export function WeeklyActions({ actions }: WeeklyActionsProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <CheckSquare className="h-5 w-5 text-emerald-500" />
+        <CardTitle className="flex items-center gap-2 text-base font-semibold text-ink">
+          <CheckSquare className="h-4 w-4 text-mute" />
           This Week&apos;s Actions
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <ul className="space-y-3">
+        <ul className="space-y-1">
           {actions.map((action, i) => (
-            <li key={i} className="flex items-start gap-3 group">
-              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-slate-200 group-hover:border-blue-400 transition-colors mt-0.5">
-                <span className="text-xs font-medium text-slate-400 group-hover:text-blue-500">{i + 1}</span>
+            <li key={i} className="group flex items-center gap-3 rounded-lg px-2 py-2 -mx-2 transition-colors hover:bg-canvas-soft">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-hairline text-xs font-medium text-mute group-hover:border-ink group-hover:text-ink transition-colors">
+                {i + 1}
               </div>
-              <div className="flex-1 flex items-center justify-between">
-                <span className="text-sm text-slate-700">{action}</span>
-                <ArrowRight className="h-4 w-4 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="flex flex-1 items-center justify-between">
+                <span className="text-sm text-body group-hover:text-ink">{action}</span>
+                <ArrowRight className="h-4 w-4 text-mute opacity-0 transition-opacity group-hover:opacity-100" />
               </div>
             </li>
           ))}

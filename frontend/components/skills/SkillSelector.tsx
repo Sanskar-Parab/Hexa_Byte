@@ -64,16 +64,16 @@ export function SkillSelector({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {selectedSkills.length > 0 && (
         <div>
-          <p className="text-sm font-medium text-slate-700 mb-2">Your Skills ({selectedSkills.length})</p>
+          <p className="text-sm font-medium text-ink mb-2">Your Skills ({selectedSkills.length})</p>
           <div className="space-y-3">
             {selectedSkills.map((item) => (
-              <div key={item.skill.id} className="flex items-center gap-3 rounded-lg border p-3 bg-white">
+              <div key={item.skill.id} className="flex items-center gap-3 rounded-lg border border-hairline p-3 bg-canvas">
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-slate-900">{item.skill.name}</p>
-                  <p className="text-xs text-slate-500">{item.skill.category}</p>
+                  <p className="text-sm font-medium text-ink">{item.skill.name}</p>
+                  <p className="text-xs text-mute">{item.skill.category}</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-32">
@@ -84,12 +84,12 @@ export function SkillSelector({
                       step={1}
                       onValueCommit={([v]) => onUpdateProficiency(item.skill.id, v)}
                     />
-                    <p className="text-xs text-slate-500 text-center mt-1">
-                      Level {item.proficiency} - {proficiencyLabels[item.proficiency]}
+                    <p className="text-xs text-mute text-center mt-1">
+                      Level {item.proficiency} — {proficiencyLabels[item.proficiency]}
                     </p>
                   </div>
                   <Button variant="ghost" size="sm" onClick={() => onRemove(item.skill.id)}>
-                    <span className="text-rose-500 text-xs">Remove</span>
+                    <span className="text-err text-xs">Remove</span>
                   </Button>
                 </div>
               </div>
@@ -99,9 +99,9 @@ export function SkillSelector({
       )}
 
       <div>
-        <p className="text-sm font-medium text-slate-700 mb-2">Add Skills</p>
+        <p className="text-sm font-medium text-ink mb-2">Add Skills</p>
         <div className="relative mb-3">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-mute" />
           <Input
             placeholder="Search skills..."
             value={search}
@@ -113,7 +113,7 @@ export function SkillSelector({
         <div className="max-h-64 overflow-y-auto space-y-3">
           {Object.entries(grouped).map(([category, skills]) => (
             <div key={category}>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1.5">
+              <p className="text-xs font-mono uppercase tracking-wider text-mute mb-1.5">
                 {category}
               </p>
               <div className="flex flex-wrap gap-2">
@@ -126,7 +126,7 @@ export function SkillSelector({
                       onAdd(skill.id, newProficiency);
                       setTimeout(() => setAddingSkill(null), 500);
                     }}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-slate-300 bg-slate-50 px-3 py-1.5 text-sm text-slate-600 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-hairline-strong bg-canvas-soft px-3 py-1.5 text-sm text-body hover:border-ink hover:bg-canvas-soft2 hover:text-ink transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Plus className="h-3.5 w-3.5" />
                     {skill.name}
@@ -136,14 +136,14 @@ export function SkillSelector({
             </div>
           ))}
           {Object.keys(grouped).length === 0 && (
-            <p className="text-sm text-slate-500 text-center py-4">
+            <p className="text-sm text-mute text-center py-4">
               {search ? "No skills found" : "All skills selected"}
             </p>
           )}
         </div>
 
-        <div className="mt-3 pt-3 border-t">
-          <label className="text-xs text-slate-500">Default proficiency for new skills:</label>
+        <div className="mt-3 pt-3 border-t border-hairline">
+          <label className="text-xs text-mute">Default proficiency for new skills:</label>
           <div className="flex items-center gap-3 mt-1">
             <Slider
               value={[newProficiency]}
@@ -153,7 +153,7 @@ export function SkillSelector({
               onValueChange={([v]) => setNewProficiency(v)}
               className="w-32"
             />
-            <span className="text-sm font-medium text-slate-700">Level {newProficiency} - {proficiencyLabels[newProficiency]}</span>
+            <span className="text-sm font-medium text-ink">Level {newProficiency} — {proficiencyLabels[newProficiency]}</span>
           </div>
         </div>
       </div>

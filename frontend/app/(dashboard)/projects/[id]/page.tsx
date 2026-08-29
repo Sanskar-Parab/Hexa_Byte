@@ -15,10 +15,13 @@ import {
   ClipboardCheck,
   Sparkles,
   Calendar,
+  Circle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { LoadingState } from "@/components/ui/loading-state";
+import { EmptyState } from "@/components/ui/empty-state";
 import { api } from "@/lib/api";
 import { getDifficultyColor } from "@/lib/utils";
 
@@ -46,10 +49,10 @@ interface ProjectDetail {
   completed_at?: string;
 }
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any }> = {
-  recommended: { label: "Not Started", color: "bg-slate-100 text-slate-700", icon: RotateCcw },
-  in_progress: { label: "In Progress", color: "bg-blue-100 text-blue-700", icon: Play },
-  completed: { label: "Completed", color: "bg-emerald-100 text-emerald-700", icon: CheckCircle2 },
+const STATUS_CONFIG: Record<string, { label: string; className: string; icon: typeof Circle }> = {
+  recommended: { label: "Not Started", className: "bg-canvas-soft2 text-mute", icon: RotateCcw },
+  in_progress: { label: "In Progress", className: "bg-warn-soft text-warn-deep", icon: Play },
+  completed: { label: "Completed", className: "bg-link-soft text-link-deep", icon: CheckCircle2 },
 };
 
 export default function ProjectDetailPage() {
@@ -85,11 +88,7 @@ export default function ProjectDetailPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-      </div>
-    );
+    return <LoadingState message="Loading project..." />;
   }
 
   if (!project) {
@@ -98,10 +97,10 @@ export default function ProjectDetailPage() {
         <Button variant="ghost" onClick={() => router.back()} className="mb-6">
           <ArrowLeft className="h-4 w-4 mr-2" /> Back to Projects
         </Button>
-        <div className="text-center py-20">
-          <h2 className="text-xl font-semibold text-slate-900">Project not found</h2>
-          <p className="text-slate-600 mt-2">The project you're looking for doesn't exist.</p>
-        </div>
+        <EmptyState
+          title="Project not found"
+          description="The project you're looking for doesn't exist or may have been removed."
+        />
       </div>
     );
   }
@@ -119,52 +118,48 @@ export default function ProjectDetailPage() {
         <ArrowLeft className="h-4 w-4 mr-2" /> Back to Projects
       </Button>
 
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <div className="flex items-center gap-3 mb-2">
-            {isAI && (
-              <Badge className="bg-amber-100 text-amber-700">
-                <Sparkles className="h-3 w-3 mr-1" /> AI Generated
-              </Badge>
-            )}
-            <Badge className={getDifficultyColor(project.difficulty)}>
-              {project.difficulty}
+      <div>
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          {isAI && (
+            <Badge variant="violet">
+              <Sparkles className="h-3 w-3" /> AI Generated
             </Badge>
-            <Badge className={statusConfig.color}>
-              <StatusIcon className="h-3 w-3 mr-1" />
-              {statusConfig.label}
-            </Badge>
-          </div>
-          <h1 className="text-3xl font-bold text-slate-900">{project.title}</h1>
+          )}
+          <Badge className={getDifficultyColor(project.difficulty)}>{project.difficulty}</Badge>
+          <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${statusConfig.className}`}>
+            <StatusIcon className="h-3 w-3" />
+            {statusConfig.label}
+          </span>
         </div>
+        <h1 className="text-3xl font-semibold tracking-tight text-ink">{project.title}</h1>
       </div>
 
       <Card>
         <CardContent className="p-6">
-          <p className="text-slate-700 leading-relaxed">{project.description}</p>
+          <p className="leading-relaxed text-body">{project.description}</p>
           {isAI && project.why_this_project && (
-            <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-              <p className="text-sm text-blue-800 italic">
-                <strong>Why this project:</strong> {project.why_this_project}
+            <div className="mt-4 flex gap-2 rounded-lg bg-canvas-soft p-4">
+              <Target className="mt-0.5 h-4 w-4 shrink-0 text-link" />
+              <p className="text-sm leading-relaxed text-body">
+                <strong className="text-ink">Why this project — </strong>
+                {project.why_this_project}
               </p>
             </div>
           )}
         </CardContent>
       </Card>
 
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Clock className="h-5 w-5 text-blue-600" />
+            <CardTitle className="flex items-center gap-2 text-base font-semibold text-ink">
+              <Clock className="h-4 w-4 text-mute" />
               Duration
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-semibold text-slate-900">
-              {project.estimated_duration_weeks
-                ? `${project.estimated_duration_weeks} weeks`
-                : project.duration || "N/A"}
+            <p className="text-2xl font-semibold tracking-tight text-ink">
+              {project.estimated_duration_weeks ? `${project.estimated_duration_weeks} weeks` : project.duration || "N/A"}
             </p>
           </CardContent>
         </Card>
@@ -172,13 +167,13 @@ export default function ProjectDetailPage() {
         {project.portfolio_value && (
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <BarChart2 className="h-5 w-5 text-purple-600" />
+              <CardTitle className="flex items-center gap-2 text-base font-semibold text-ink">
+                <BarChart2 className="h-4 w-4 text-mute" />
                 Portfolio Value
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-semibold text-slate-900">{project.portfolio_value}</p>
+              <p className="text-2xl font-semibold tracking-tight text-ink">{project.portfolio_value}</p>
             </CardContent>
           </Card>
         )}
@@ -187,13 +182,13 @@ export default function ProjectDetailPage() {
       {project.expected_outcome && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Target className="h-5 w-5 text-emerald-600" />
+            <CardTitle className="flex items-center gap-2 text-base font-semibold text-ink">
+              <Target className="h-4 w-4 text-mute" />
               Expected Outcome
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-slate-700">{project.expected_outcome}</p>
+            <p className="text-body">{project.expected_outcome}</p>
           </CardContent>
         </Card>
       )}
@@ -201,9 +196,9 @@ export default function ProjectDetailPage() {
       {skills.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <BarChart2 className="h-5 w-5 text-amber-600" />
-              Skills
+            <CardTitle className="flex items-center gap-2 text-base font-semibold text-ink">
+              <BarChart2 className="h-4 w-4 text-mute" />
+              Skills Targeted
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -221,16 +216,16 @@ export default function ProjectDetailPage() {
       {isAI && project.learning_objectives && project.learning_objectives.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <BookOpen className="h-5 w-5 text-indigo-600" />
+            <CardTitle className="flex items-center gap-2 text-base font-semibold text-ink">
+              <BookOpen className="h-4 w-4 text-mute" />
               Learning Objectives
             </CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="space-y-2">
               {project.learning_objectives.map((obj, idx) => (
-                <li key={idx} className="flex items-start gap-2 text-slate-700">
-                  <CheckCircle2 className="h-4 w-4 text-indigo-500 mt-0.5 shrink-0" />
+                <li key={idx} className="flex items-start gap-2 text-body">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-link" />
                   {obj}
                 </li>
               ))}
@@ -242,16 +237,16 @@ export default function ProjectDetailPage() {
       {isAI && project.deliverables && project.deliverables.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Package className="h-5 w-5 text-rose-600" />
-              Deliverables
+            <CardTitle className="flex items-center gap-2 text-base font-semibold text-ink">
+              <Package className="h-4 w-4 text-mute" />
+              Expected Evidence
             </CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="space-y-2">
               {project.deliverables.map((item, idx) => (
-                <li key={idx} className="flex items-start gap-2 text-slate-700">
-                  <CheckCircle2 className="h-4 w-4 text-rose-500 mt-0.5 shrink-0" />
+                <li key={idx} className="flex items-start gap-2 text-body">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-link" />
                   {item}
                 </li>
               ))}
@@ -263,16 +258,16 @@ export default function ProjectDetailPage() {
       {isAI && project.completion_criteria && project.completion_criteria.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <ClipboardCheck className="h-5 w-5 text-teal-600" />
+            <CardTitle className="flex items-center gap-2 text-base font-semibold text-ink">
+              <ClipboardCheck className="h-4 w-4 text-mute" />
               Completion Criteria
             </CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="space-y-2">
               {project.completion_criteria.map((criteria, idx) => (
-                <li key={idx} className="flex items-start gap-2 text-slate-700">
-                  <CheckCircle2 className="h-4 w-4 text-teal-500 mt-0.5 shrink-0" />
+                <li key={idx} className="flex items-start gap-2 text-body">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-link" />
                   {criteria}
                 </li>
               ))}
@@ -284,8 +279,8 @@ export default function ProjectDetailPage() {
       {(project.started_at || project.completed_at) && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-slate-600" />
+            <CardTitle className="flex items-center gap-2 text-base font-semibold text-ink">
+              <Calendar className="h-4 w-4 text-mute" />
               Progress Timeline
             </CardTitle>
           </CardHeader>
@@ -293,10 +288,10 @@ export default function ProjectDetailPage() {
             <div className="space-y-3">
               {project.started_at && (
                 <div className="flex items-center gap-3">
-                  <div className="h-3 w-3 rounded-full bg-blue-500" />
+                  <div className="h-2.5 w-2.5 rounded-full bg-warn" />
                   <div>
-                    <p className="text-sm font-medium text-slate-900">Started</p>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-sm font-medium text-ink">Started</p>
+                    <p className="text-xs text-mute">
                       {new Date(project.started_at).toLocaleDateString("en-US", {
                         year: "numeric",
                         month: "long",
@@ -310,10 +305,10 @@ export default function ProjectDetailPage() {
               )}
               {project.completed_at && (
                 <div className="flex items-center gap-3">
-                  <div className="h-3 w-3 rounded-full bg-emerald-500" />
+                  <div className="h-2.5 w-2.5 rounded-full bg-link" />
                   <div>
-                    <p className="text-sm font-medium text-slate-900">Completed</p>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-sm font-medium text-ink">Completed</p>
+                    <p className="text-xs text-mute">
                       {new Date(project.completed_at).toLocaleDateString("en-US", {
                         year: "numeric",
                         month: "long",
@@ -330,34 +325,22 @@ export default function ProjectDetailPage() {
         </Card>
       )}
 
-      <Card className="bg-slate-50">
+      <Card className="bg-canvas-soft">
         <CardContent className="p-6">
-          <h3 className="text-lg font-semibold text-slate-900 mb-4">Project Actions</h3>
+          <h3 className="mb-4 text-base font-semibold text-ink">Project Actions</h3>
           <div className="flex gap-3">
             {project.status === "recommended" && (
-              <Button
-                onClick={() => handleStatusChange("in_progress")}
-                disabled={updating}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
+              <Button onClick={() => handleStatusChange("in_progress")} disabled={updating}>
                 <Play className="h-4 w-4 mr-2" /> Start Project
               </Button>
             )}
             {project.status === "in_progress" && (
-              <Button
-                onClick={() => handleStatusChange("completed")}
-                disabled={updating}
-                className="bg-emerald-600 hover:bg-emerald-700"
-              >
+              <Button onClick={() => handleStatusChange("completed")} disabled={updating}>
                 <CheckCircle2 className="h-4 w-4 mr-2" /> Mark as Completed
               </Button>
             )}
             {project.status === "completed" && (
-              <Button
-                onClick={() => handleStatusChange("in_progress")}
-                disabled={updating}
-                variant="outline"
-              >
+              <Button onClick={() => handleStatusChange("in_progress")} disabled={updating} variant="outline">
                 <RotateCcw className="h-4 w-4 mr-2" /> Reopen Project
               </Button>
             )}
