@@ -367,7 +367,7 @@ GROQ_MODEL=openai/gpt-oss-120b
 | Command | Description |
 |---------|-------------|
 | `uvicorn app.main:app --reload` | Start dev server with auto-reload |
-| `pytest` | Run tests (285+ tests) |
+| `pytest` | Run tests (300+ tests) |
 
 ---
 
