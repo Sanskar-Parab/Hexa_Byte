@@ -5,6 +5,7 @@ import { ChatInterface } from "@/components/coach/ChatInterface";
 import { api } from "@/lib/api";
 import { CoachContext } from "@/types";
 import { SectionHeader } from "@/components/ui/section-header";
+import { SkeletonBlock } from "@/components/ui/loading-state";
 import { Target, Gauge, Flame, Map } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -83,6 +84,17 @@ export default function CoachPage() {
         description="Personalized guidance based on your actual career progress."
         className="mb-6"
       />
+
+      {loading && (
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="rounded-xl border border-hairline bg-canvas p-4 shadow-card">
+              <SkeletonBlock className="h-3 w-16" />
+              <SkeletonBlock className="mt-3 h-4 w-full" />
+            </div>
+          ))}
+        </div>
+      )}
 
       {!loading && tiles.length > 0 && (
         <div className={cn("mb-6 grid gap-3", tiles.length === 1 ? "grid-cols-1" : tiles.length === 2 ? "grid-cols-2" : tiles.length === 3 ? "grid-cols-3" : "grid-cols-2 sm:grid-cols-4")}>
