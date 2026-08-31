@@ -272,8 +272,17 @@ def match_job_to_user(db: Session, user_id: UUID, job_data: dict) -> dict:
         top_gap = item["skill_name"]
         break
 
-    # Suggest next action
-    next_action = _suggest_next_action(strong, developing, missing, not_demonstrated)
+    # Suggest next action. A 0% alignment from zero detected requirements means
+    # extraction failed, not that the user is unqualified — don't let it fall
+    # through to _suggest_next_action's empty-lists case, which claims the
+    # user "appears well-qualified" (contradicting the 0% shown alongside it).
+    if total_required == 0:
+        next_action = (
+            "We couldn't detect specific requirements from this posting. "
+            "Try pasting the full description with bullet-pointed requirements."
+        )
+    else:
+        next_action = _suggest_next_action(strong, developing, missing, not_demonstrated)
 
     return {
         "alignment_percentage": round(alignment, 1),

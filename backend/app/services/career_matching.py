@@ -18,6 +18,13 @@ WEIGHTS = {
     "experience_alignment": 0.10,
 }
 
+# A required skill counts as already a "strength" once the user is at least
+# Intermediate (3/5) — kept in sync with _build_strengths. Skill-gap/blocker
+# logic below must exclude skills at or above this threshold, otherwise the
+# same skill can show up simultaneously as a "Why it fits" strength and a
+# "Skill gap"/"Biggest blocker", which is contradictory in the UI.
+STRENGTH_PROFICIENCY_THRESHOLD = 3
+
 
 def _compute_skill_score(user_skills: list[UserSkill], career: Career, all_skills: dict[UUID, Skill]) -> float:
     if not career.required_skills:
@@ -210,7 +217,7 @@ def _build_strengths(
 
     for us in user_skills:
         s = all_skills.get(us.skill_id)
-        if s and s.name in (career.required_skills or []) and us.proficiency >= 3:
+        if s and s.name in (career.required_skills or []) and us.proficiency >= STRENGTH_PROFICIENCY_THRESHOLD:
             skill_importance = importance.get(s.name, 1.0)
             weighted = us.proficiency * skill_importance
             level_name = _get_level_name(us.proficiency)
@@ -244,6 +251,9 @@ def _build_missing_skills(
 
     for skill_name in (career.required_skills or []):
         current = user_skill_map.get(skill_name, 0)
+        if current >= STRENGTH_PROFICIENCY_THRESHOLD:
+            # Already a demonstrated strength for this career — not a gap.
+            continue
         gap_size = 5 - current
         skill_importance = importance.get(skill_name, 1.0)
         priority_score = gap_size * skill_importance
@@ -290,6 +300,9 @@ def _build_biggest_blocker(
 
     for skill_name in career.required_skills:
         current = user_skill_map.get(skill_name, 0)
+        if current >= STRENGTH_PROFICIENCY_THRESHOLD:
+            # Already a demonstrated strength for this career — not a blocker.
+            continue
         gap_size = 5 - current
         skill_importance = importance.get(skill_name, 1.0)
         priority = gap_size * skill_importance

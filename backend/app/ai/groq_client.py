@@ -251,19 +251,6 @@ class GroqAIClient:
             elif raw not in ("beginner", "intermediate", "advanced", "practical"):
                 q["difficulty"] = "practical"
 
-    def generate_questions(self, skill_name: str) -> tuple[Optional[SkillAssessmentResponse], Optional[str]]:
-        """Generate questions and return (result, error_message).
-        
-        Returns:
-            Tuple of (SkillAssessmentResponse or None, error_message or None)
-        """
-        if not self.is_available:
-            error_msg = self._error_message or "AI service not available"
-            logger.warning(error_msg)
-            return None, error_msg
-
-        prompt = QUESTION_GENERATION_PROMPT.replace("{skill_name}", skill_name)
-
     @staticmethod
     def _get_candidate_models() -> list[str]:
         configured = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b")
@@ -459,8 +446,11 @@ class GroqAIClient:
                         model=model,
                         messages=messages,
                         temperature=0.6,
-                        max_tokens=900,
-                        timeout=20,
+                        # The system prompt asks for up to 3 skills, each with its own
+                        # Why/Roadmap/Practice/Next-action breakdown (see COACH_SYSTEM_PROMPT
+                        # rule 5/7) — 900 routinely truncated that mid-sentence.
+                        max_tokens=1800,
+                        timeout=25,
                     )
 
                     content = response.choices[0].message.content

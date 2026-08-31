@@ -289,15 +289,24 @@ def save_skill_aware_recommendations(
     career_id: UUID,
     project_ids: list[UUID],
 ) -> list[RecommendedProject]:
-    """Save ranked project recommendations to database."""
-    saved = []
+    """Save ranked project recommendations to database.
+
+    Returns exactly one record per `project_id`, in the same order — reusing
+    an existing recommendation when one is already saved from a previous call
+    rather than creating a duplicate. Callers rely on a 1:1, same-order
+    correspondence with `project_ids`, so a project that already has a saved
+    recommendation must still be included in the result.
+    """
+    result = []
     for pid in project_ids:
         existing = db.query(RecommendedProject).filter(
             RecommendedProject.user_id == user_id,
             RecommendedProject.project_id == pid,
             RecommendedProject.career_id == career_id,
         ).first()
-        if not existing:
+        if existing:
+            result.append(existing)
+        else:
             rec = RecommendedProject(
                 user_id=user_id,
                 project_id=pid,
@@ -305,6 +314,6 @@ def save_skill_aware_recommendations(
                 status="recommended",
             )
             db.add(rec)
-            saved.append(rec)
+            result.append(rec)
     db.commit()
-    return saved
+    return result

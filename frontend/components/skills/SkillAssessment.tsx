@@ -52,7 +52,7 @@ interface SkillAssessmentProps {
   onCancel: () => void;
 }
 
-type Phase = "idle" | "taking" | "submitting" | "result" | "error";
+type Phase = "idle" | "starting" | "taking" | "submitting" | "result" | "error";
 
 export function SkillAssessment({
   skillId,
@@ -87,6 +87,7 @@ export function SkillAssessment({
 
   const handleStart = async () => {
     setError(null);
+    setPhase("starting");
     try {
       const response = await api.startSkillAssessment(skillId);
       setAssessment(response);
@@ -239,6 +240,22 @@ export function SkillAssessment({
               Set Level Manually
             </Button>
           </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (phase === "starting") {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Brain className="h-5 w-5 text-ink" />
+            AI Skill Assessment
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <LoadingState message="Generating your questions... this can take up to 15 seconds." className="py-10" />
         </CardContent>
       </Card>
     );

@@ -43,7 +43,7 @@ def list_recommendations(
 
     return [
         SkillAwareProjectResponse(
-            id=str(saved[i].id) if i < len(saved) else None,
+            id=str(saved[i].id),
             project={
                 "id": str(r["project"].id),
                 "title": r["project"].title,
