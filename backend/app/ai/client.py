@@ -10,7 +10,7 @@ class RoadmapResponse(BaseModel):
     phases: list[dict]
 
 
-MASTER_SYSTEM_PROMPT = """You are PathPilot AI, an expert career guidance system for students and professionals in India.
+MASTER_SYSTEM_PROMPT = """You are Next Path AI, an expert career guidance system for students and professionals in India.
 
 Your role is to generate personalized learning roadmaps based on:
 1. The user's current skill level and gaps
@@ -101,7 +101,7 @@ class AIClient:
             response = await self.client.chat.completions.create(
                 model="gpt-4",
                 messages=[
-                    {"role": "system", "content": "You are PathPilot AI, an expert career advisor. Provide clear, actionable career explanations tailored to the Indian job market."},
+                    {"role": "system", "content": "You are Next Path AI, an expert career advisor. Provide clear, actionable career explanations tailored to the Indian job market."},
                     {"role": "user", "content": f"Explain the {career_name} career path for this user: {user_context}"},
                 ],
                 temperature=0.7,

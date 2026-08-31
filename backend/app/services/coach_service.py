@@ -19,7 +19,7 @@ from app.models.job_analysis import JobAnalysis
 
 logger = logging.getLogger(__name__)
 
-COACH_SYSTEM_PROMPT = """You are PathPilot AI, an expert career coach for students and professionals in India.
+COACH_SYSTEM_PROMPT = """You are Next Path AI, an expert career coach for students and professionals in India.
 
 === CORE RESPONSE PRINCIPLE ===
 ALWAYS answer the user's actual question FIRST. The user's question is the priority.

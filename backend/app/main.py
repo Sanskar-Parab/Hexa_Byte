@@ -15,7 +15,7 @@ from app.api import auth, profile, skills, interests, assessment, careers, skill
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
-    title="PathPilot AI",
+    title="Next Path AI",
     description="AI-powered career guidance system",
     version="1.0.0",
 )
@@ -70,9 +70,9 @@ def startup():
 
 @app.get("/health")
 def health_check():
-    return {"status": "healthy", "service": "PathPilot AI"}
+    return {"status": "healthy", "service": "Next Path AI"}
 
 
 @app.get("/")
 def root():
-    return {"message": "PathPilot AI Backend", "docs": "/docs"}
+    return {"message": "Next Path AI Backend", "docs": "/docs"}
