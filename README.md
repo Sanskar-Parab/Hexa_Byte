@@ -31,14 +31,17 @@ Next Path AI is an AI-powered career guidance platform that analyzes your skills
 - **Skill Matching** — Fuzzy/partial matching (React.js matches React) with strong/developing/missing breakdowns
 
 ### Jobs & Internships (AI-Personalized Recommendations)
-- **Live Provider Data** — Real internships and jobs fetched from the RapidAPI "Internships API" provider (Career Site API for internships, Job Board API for jobs), never a local/fake dataset
+- **Live Provider Data** — Real jobs and internships fetched from JSearch (by OpenWeb Ninja, via RapidAPI), never a local/fake dataset
+- **India-First** — Every search is scoped server-side to India (`country=in`); recommendations are India-only by default, no manual filter needed
 - **One Provider Abstraction** — `opportunity_provider.py` is the only module that talks to RapidAPI; the matching/recommendation layer is provider-agnostic, so swapping providers later doesn't touch the matching engine
+- **Career-Aware Search** — Search queries are generated from the user's target career (falling back to their strongest skill), not a blind keyword dump — see [How the Matching Pipeline Works](#jobs--internships-how-the-matching-pipeline-works)
 - **Skill Normalization Layer** — Deterministic alias resolution (React/React.js/React JS, Node/NodeJS/Node.js, HTML+CSS → HTML/CSS, etc.) so external postings match your skill profile without string-equality guesswork
 - **Weighted Skill Matching** — Match score reflects proficiency, not just skill-name overlap (matched/partial/missing breakdown, each tied to your actual proficiency level)
+- **Beginner-Priority Ranking** — For beginner users (no skill at Advanced+ proficiency), internship/entry-level postings get a small ranking boost and senior postings a small penalty — never a hard filter, and only ever applied on top of a real skill match
 - **AI Contextual Analysis** — Groq reasons about transferable skills and role centrality for top candidates only, blended with (never overriding) the deterministic score
-- **Minimal Upstream Calls** — Exactly one provider request per opportunity type per cache window; no role-discovery fan-out, so a low RapidAPI quota isn't exhausted by normal use
+- **Minimal Upstream Calls** — At most two provider requests per recommendation request (one primary career/skill query, plus one secondary query only if the primary came back thin) — no per-skill fan-out, so a low RapidAPI quota isn't exhausted by normal use
 - **Skill-Gap → Roadmap/Project Loop** — Missing skills on a listing link directly to your roadmap and skill-aware project recommendations
-- **Graceful, Partial-Aware Degradation** — RapidAPI outages/rate limits/quota exhaustion never crash the app; if only one opportunity type fails (e.g. jobs down, internships fine) the data that did load is still shown, with a clear message about what's missing
+- **Graceful Degradation** — RapidAPI outages/rate limits/quota exhaustion never crash the app; if a query fails but a fallback query still returns data, that data is still shown
 
 ### Adaptive Systems
 - **Adaptive Roadmaps** — Phases auto-adapt based on proficiency (skip adapted phases, reduce duration for known skills)
@@ -201,14 +204,15 @@ OPENAI_API_KEY=your-openai-api-key-here
 GROQ_API_KEY=your-groq-api-key-here
 GROQ_MODEL=openai/gpt-oss-120b
 
-# Opportunity provider (RapidAPI "Internships API") — powers Jobs & Internships
-# recommendations. Career Site API endpoint = internships, Job Board API
-# endpoint = jobs, both on this one RapidAPI product.
+# Opportunity provider (JSearch by OpenWeb Ninja, via RapidAPI) — powers Jobs
+# & Internships recommendations. Subscribe at
+# https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch and paste your key below.
+# Credentials are backend-only — never sent to the frontend, logged, or returned by any API.
 # Without this, the feature degrades gracefully (empty list + "temporarily
 # unavailable" message) instead of breaking the app.
 OPPORTUNITY_RAPIDAPI_KEY=your-rapidapi-key-here
-OPPORTUNITY_RAPIDAPI_HOST=internships-api.p.rapidapi.com
-OPPORTUNITY_CACHE_TTL_SECONDS=900
+OPPORTUNITY_RAPIDAPI_HOST=jsearch.p.rapidapi.com
+OPPORTUNITY_CACHE_TTL_SECONDS=3600
 OPPORTUNITY_QUOTA_BACKOFF_SECONDS=3600
 
 # Opportunity match scoring weights (deterministic skill score vs AI contextual score)
@@ -380,28 +384,36 @@ OPPORTUNITY_MAX_SKILL_EXTRACTIONS=20
 ```
 Authenticated user (JWT)
   → user's demonstrated skills + proficiency (app.services.opportunity_recommendation.get_user_skill_map)
+  → career-aware search query generation (app.services.opportunity_recommendation._build_search_queries
+    — primary query from target career, falling back to strongest skill, then a generic query;
+    an internship-only request biases the query text itself instead of fetching a mixed pool)
+  → live provider data (app.services.opportunity_provider — JSearch GET /search, country=in)
+      primary query always runs; a second (skill-based) query only runs if the
+      primary came back with fewer than MIN_RESULTS_BEFORE_SECONDARY_QUERY results
+      — never one request per skill
+    (cached per exact query, deduped by job_id/apply URL/title+employer+location,
+    non-India results rejected even though the search itself is already India-scoped)
   → skill normalization (app.services.skill_normalization — aliases, no LLM calls)
-  → live provider data (app.services.opportunity_provider — RapidAPI "Internships API")
-      ├── Career Site API (/active-jb-7d)  -> internships
-      └── Job Board API   (/active-ats-7d) -> jobs
-    (cached, deduped by id/URL, expired postings filtered by date_validthrough)
-  → required-skill extraction (this provider has no explicit skills field on
-    ANY posting, so Groq extracts from title+description; results are cached
-    per posting and capped at OPPORTUNITY_MAX_SKILL_EXTRACTIONS new calls
-    per request so a large result set can't trigger unbounded AI usage)
+  → required-skill extraction (JSearch's job_required_skills is used directly when
+    present; otherwise Groq extracts from title+description+highlights — results
+    are cached per posting and capped at OPPORTUNITY_MAX_SKILL_EXTRACTIONS new
+    calls per request so a large result set can't trigger unbounded AI usage)
   → deterministic weighted skill matching (app.services.opportunity_matching — proficiency-aware, 0-100 score)
   → AI contextual analysis for top candidates only (app.ai.groq_client.analyze_opportunity_match)
-  → hybrid final score (deterministic × 0.6 + AI × 0.4, configurable via env)
+  → hybrid score (deterministic × 0.6 + AI × 0.4, configurable via env)
+  → beginner-priority experience adjustment (small ranking nudge toward
+    internship/entry-level postings for beginner users; only ever applied on
+    top of an already-nonzero match, never a hard filter)
   → ranked, filtered results
   → GET /api/opportunities/recommendations
   → frontend opportunity cards (/opportunities, and "Opportunities For You" on the dashboard)
 ```
 
-`opportunity_provider.py` is the only module that knows about RapidAPI — the matching engine, AI analysis, ranking, and frontend are all provider-agnostic, so the provider could be swapped again without touching them. Both internships and jobs run through the exact same matching/AI/ranking code path; there is no separate engine per type.
+`opportunity_provider.py` is the only module that knows about RapidAPI/JSearch — the matching engine, AI analysis, ranking, and frontend are all provider-agnostic, so the provider could be swapped again without touching them. Jobs and internships are not separate JSearch endpoints — JSearch returns a mixed pool per query, which is classified locally as `"internship"` or `"job"` (only when provider metadata or the title clearly says so — never guessed) and both run through the exact same matching/AI/ranking code path; there is no separate engine per type.
 
-Every opportunity returned originates from the live provider — there is no local/fake job dataset. If RapidAPI is unavailable, rate-limited, or unconfigured, the endpoint returns `{"recommendations": [], "source_status": "unavailable", "message": "..."}` instead of failing. If only one type fails (e.g. jobs down but internships fine), the data that *did* load is still returned (`source_status: "ok"`) with an informational message about what's missing — a partial provider outage never blanks out working data. The UI shows a matching "temporarily unavailable" empty state only when nothing could be fetched at all.
+Every opportunity returned originates from the live provider — there is no local/fake job dataset. If RapidAPI is unavailable, rate-limited, or unconfigured, the endpoint returns `{"recommendations": [], "source_status": "unavailable", "message": "..."}` instead of failing. If the primary query fails but the secondary query still returns data (or vice versa), that data is still returned (`source_status: "ok"`) — a single query failure never blanks out working data. The UI shows a matching "temporarily unavailable" empty state only when nothing could be fetched at all.
 
-**Note on RapidAPI quota:** opportunity-data providers on RapidAPI commonly enforce small monthly request quotas. Exactly one provider request is made per opportunity type per cache window (`OPPORTUNITY_CACHE_TTL_SECONDS`) — never more, regardless of how many users/pages hit the endpoint — and a 429 triggers an in-memory backoff (`OPPORTUNITY_QUOTA_BACKOFF_SECONDS`) so a spent quota fails fast instead of being hit again on every request. A 429 response means the plan is spent, not a bug — check usage at your RapidAPI dashboard.
+**Note on RapidAPI quota:** JSearch's Basic plan enforces a small monthly request quota. At most two provider requests are made per recommendation request (`OPPORTUNITY_CACHE_TTL_SECONDS` caches each exact query) — never more, regardless of how many users/pages hit the endpoint — and a 429 triggers an in-memory backoff (`OPPORTUNITY_QUOTA_BACKOFF_SECONDS`) so a spent quota fails fast instead of being hit again on every request. A 429 response means the plan is spent, not a bug — check usage at your RapidAPI dashboard.
 
 ---
 

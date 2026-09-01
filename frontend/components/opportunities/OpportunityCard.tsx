@@ -87,9 +87,14 @@ export function OpportunityCard({ opportunity }: { opportunity: OpportunityRecom
                     <MapPin className="h-3 w-3" /> {location}
                   </span>
                 )}
-                {remote && (
+                {remote === true && (
                   <span className="inline-flex items-center gap-1">
                     <Globe className="h-3 w-3" /> Remote
+                  </span>
+                )}
+                {remote === false && (
+                  <span className="inline-flex items-center gap-1">
+                    <Globe className="h-3 w-3" /> On-site
                   </span>
                 )}
                 {work_type && (

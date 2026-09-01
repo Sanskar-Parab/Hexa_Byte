@@ -60,9 +60,9 @@ export default function OpportunitiesPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <SectionHeader
-        eyebrow="Recommended for you"
+        eyebrow="Opportunities in India"
         title="Jobs & Internships"
-        description="Real openings from company career sites and job boards, ranked by how well they match your demonstrated skills — not just keywords."
+        description="Real openings from across the web, ranked by how well they match your demonstrated skills — not just keywords."
       />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

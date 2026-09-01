@@ -1,15 +1,18 @@
 """Orchestrates the AI-personalized job/internship recommendation pipeline.
 
-USER -> demonstrated skills+proficiency -> normalization -> live opportunity
-provider data -> required-skill extraction -> deterministic skill matching ->
+USER -> demonstrated skills+proficiency -> normalization -> career-aware
+JSearch query -> live opportunity provider data (India) -> required-skill
+extraction -> deterministic skill matching -> experience-suitability nudge ->
 AI contextual analysis (top candidates only) -> hybrid score -> ranked,
 filtered results.
 
 Never recommends from a local database of jobs — every opportunity returned
-originates from `app.services.opportunity_provider` (live RapidAPI data).
+originates from `app.services.opportunity_provider` (live JSearch data via
+RapidAPI).
 """
 import logging
 import os
+import re
 import threading
 import time
 from typing import Any, Optional
@@ -28,13 +31,18 @@ AI_ANALYSIS_TOP_N = int(os.getenv("OPPORTUNITY_AI_TOP_N", "5"))
 DETERMINISTIC_WEIGHT = float(os.getenv("OPPORTUNITY_DETERMINISTIC_WEIGHT", "0.6"))
 AI_WEIGHT = float(os.getenv("OPPORTUNITY_AI_WEIGHT", "0.4"))
 
-# This provider returns no explicit skills field on ANY posting, so every
-# opportunity would otherwise need its own Groq call just to get a skill
-# list. Bound that cost two ways: cache extracted skills per posting (they
-# don't change) and cap how many *new* extractions one request will pay for
-# — postings beyond the cap simply get an empty skill list (deterministic
-# score 0), which is no worse than what an irrelevant posting would score
-# anyway, and they still sort to the bottom.
+# Search strategy (Phase 10): one primary career/skill-based query per
+# request; a second query only fires when the primary came back thin. Never
+# one query per skill — that's what exhausted the previous provider's quota.
+MIN_RESULTS_BEFORE_SECONDARY_QUERY = 8
+
+# JSearch returns no explicit skills field on many postings, so those fall
+# back to Groq extraction from title+description. Bound that cost two ways:
+# cache extracted skills per posting (they don't change) and cap how many
+# *new* extractions one request will pay for — postings beyond the cap
+# simply get an empty skill list (deterministic score 0), which is no worse
+# than what an irrelevant posting would score anyway, and they still sort to
+# the bottom.
 _SKILL_EXTRACTION_CACHE_TTL_SECONDS = 3600
 MAX_SKILL_EXTRACTIONS_PER_REQUEST = int(os.getenv("OPPORTUNITY_MAX_SKILL_EXTRACTIONS", "20"))
 
@@ -43,8 +51,17 @@ _skill_extraction_lock = threading.Lock()
 
 UNAVAILABLE_MESSAGE = "Opportunities are temporarily unavailable. Please try again later."
 
-# type -> human label used when only that type failed to fetch (partial degradation).
-_TYPE_LABELS = {"internship": "Internship", "job": "Job"}
+# Beginner-priority ranking nudge (Phase 24/41) — a small signal, not a hard
+# filter, and only ever applied on top of a nonzero deterministic skill match
+# so it can never turn an unrelated posting into a "good" recommendation.
+_BEGINNER_FRIENDLY_PATTERN = re.compile(
+    r"\b(intern(ship)?|entry.level|entry level|junior|graduate|fresher|trainee)\b", re.IGNORECASE
+)
+_SENIOR_PATTERN = re.compile(r"\b(senior|sr\.?|staff|principal|lead|architect|manager)\b", re.IGNORECASE)
+BEGINNER_PROFICIENCY_CEILING = 4  # user has no skill at Advanced (4/5) or above
+SENIOR_EXPERIENCE_YEARS = 4
+BEGINNER_MATCH_BONUS = 8
+SENIOR_ROLE_PENALTY = 12
 
 
 def _get_cached_skills(cache_key: str) -> Optional[list[str]]:
@@ -83,10 +100,96 @@ def get_user_skill_map(db: Session, user_id: UUID) -> dict[str, int]:
     return result
 
 
+def _top_skill(user_skill_map: dict[str, int]) -> Optional[str]:
+    if not user_skill_map:
+        return None
+    return max(user_skill_map.items(), key=lambda kv: kv[1])[0]
+
+
+def _build_search_queries(
+    target_career: Optional[str],
+    user_skill_map: dict[str, int],
+    opportunity_type: str,
+) -> list[str]:
+    """Career-aware query generation (Phase 9/40): a primary query driven by
+    the user's target career (falling back to their strongest skill, then a
+    generic technology query), plus an optional secondary query driven by
+    their strongest skill — never one query per skill.
+    """
+    base = (target_career or "").strip()
+    if not base:
+        top_skill = _top_skill(user_skill_map)
+        base = f"{top_skill} developer" if top_skill else "software developer"
+
+    # An internship-only request is better served by biasing the query text
+    # itself than by fetching a mixed pool and discarding most of it.
+    suffix = " intern" if opportunity_type == "internship" else ""
+    primary = f"{base}{suffix}".strip()
+
+    queries = [primary]
+
+    top_skill = _top_skill(user_skill_map)
+    if top_skill:
+        secondary = f"{top_skill} developer{suffix}".strip()
+        if secondary.lower() != primary.lower():
+            queries.append(secondary)
+
+    return queries[:2]
+
+
+def _merge_dedupe(existing: list[dict], additions: list[dict]) -> list[dict]:
+    seen_ids = {o["id"] for o in existing}
+    seen_urls = {o["url"] for o in existing if o.get("url")}
+    merged = list(existing)
+    for opp in additions:
+        if opp["id"] in seen_ids:
+            continue
+        if opp.get("url") and opp["url"] in seen_urls:
+            continue
+        seen_ids.add(opp["id"])
+        if opp.get("url"):
+            seen_urls.add(opp["url"])
+        merged.append(opp)
+    return merged
+
+
+def _fetch_candidate_pool(
+    target_career: Optional[str],
+    user_skill_map: dict[str, int],
+    opportunity_type: str,
+) -> tuple[list[dict], bool]:
+    """Runs the search strategy: always one primary query; a second query
+    only when the primary came back thin (Phase 10). Returns
+    (opportunities, fetch_failed) — fetch_failed is only True when nothing
+    could be fetched at all, so a working secondary/failing primary (or vice
+    versa) still returns whatever data did load.
+    """
+    queries = _build_search_queries(target_career, user_skill_map, opportunity_type)
+
+    pool: list[dict] = []
+    any_success = False
+
+    try:
+        pool = opportunity_provider.get_opportunities(queries[0])
+        any_success = True
+    except opportunity_provider.OpportunityProviderError as e:
+        logger.warning("Primary opportunity search failed for %r: %s", queries[0], e)
+
+    if len(pool) < MIN_RESULTS_BEFORE_SECONDARY_QUERY and len(queries) > 1:
+        try:
+            more = opportunity_provider.get_opportunities(queries[1])
+            pool = _merge_dedupe(pool, more)
+            any_success = True
+        except opportunity_provider.OpportunityProviderError as e:
+            logger.warning("Secondary opportunity search failed for %r: %s", queries[1], e)
+
+    return pool, not any_success
+
+
 def _extract_required_skills(opportunity: dict, extraction_budget: dict[str, int]) -> list[str]:
-    """This provider does not supply an explicit required-skills field, so
-    every opportunity falls back to Groq extraction from title+description
-    (only when Groq is available; never fabricated deterministically).
+    """Use JSearch's `job_required_skills` directly when present (Phase 21).
+    Otherwise fall back to Groq extraction from title+description (only when
+    Groq is available; never fabricated deterministically).
 
     Results are cached per posting (id+type) and the number of *new*
     extractions per request is bounded by `extraction_budget` — see the
@@ -133,6 +236,29 @@ def _skill_gap_message(missing_skills: list[str]) -> Optional[str]:
     return f"Learning {', '.join(missing_skills[:2])} would strengthen this match."
 
 
+def _is_beginner_user(user_skill_map: dict[str, int]) -> bool:
+    if not user_skill_map:
+        return True
+    return max(user_skill_map.values()) < BEGINNER_PROFICIENCY_CEILING
+
+
+def _experience_adjustment(opp: dict, is_beginner: bool) -> int:
+    """Beginner-priority ranking nudge (Phase 24/41): entry-level/internship
+    roles rank slightly higher, senior roles slightly lower, for beginner
+    users only. Never hides senior roles outright — just deprioritizes them."""
+    if not is_beginner:
+        return 0
+
+    title = opp.get("title") or ""
+    years = opp.get("experience_years_required")
+
+    if opp.get("type") == "internship" or _BEGINNER_FRIENDLY_PATTERN.search(title):
+        return BEGINNER_MATCH_BONUS
+    if _SENIOR_PATTERN.search(title) or (isinstance(years, (int, float)) and years >= SENIOR_EXPERIENCE_YEARS):
+        return -SENIOR_ROLE_PENALTY
+    return 0
+
+
 def get_recommendations(
     db: Session,
     user_id: UUID,
@@ -141,56 +267,37 @@ def get_recommendations(
     min_match: int = 0,
     target_career: Optional[str] = None,
 ) -> dict[str, Any]:
-    """Full pipeline: authenticated user's skills -> live provider data -> ranked matches.
+    """Full pipeline: authenticated user's skills -> career-aware JSearch
+    query (India) -> ranked matches.
 
     Returns a dict matching OpportunityRecommendationsResponse. Degrades
-    gracefully on any provider failure — never raises to the caller. A
-    failure for one type (e.g. jobs down, internships fine) does not hide
-    the data that *did* load; `source_status` is only "unavailable" when
-    nothing could be fetched at all.
+    gracefully on any provider failure — never raises to the caller.
     """
     user_skill_map = get_user_skill_map(db, user_id)
 
-    types_to_fetch = ["internship", "job"] if opportunity_type == "all" else [opportunity_type]
+    pool, fetch_failed = _fetch_candidate_pool(target_career, user_skill_map, opportunity_type)
 
-    opportunities: list[dict] = []
-    failed_types: list[str] = []
-
-    for otype in types_to_fetch:
-        try:
-            # Exactly one provider request per type per cache window — no
-            # role-based pre-filtering or multi-call fan-out. Relevance to
-            # the user's skills is achieved entirely by the deterministic +
-            # AI scoring below, which ranks/filters after a single fetch.
-            items = opportunity_provider.get_opportunities(otype)
-            opportunities.extend(items)
-        except opportunity_provider.OpportunityProviderError as e:
-            logger.warning(f"Opportunity provider fetch failed for {otype}: {e}")
-            failed_types.append(otype)
+    if opportunity_type != "all":
+        pool = [o for o in pool if o["type"] == opportunity_type]
 
     skill_summary = {
         "skills_used": sorted(user_skill_map.keys()),
         "skill_count": len(user_skill_map),
     }
 
-    if not opportunities:
+    if not pool:
         return {
             "recommendations": [],
             "user_skill_summary": skill_summary,
-            "source_status": "unavailable" if failed_types else "ok",
-            "message": UNAVAILABLE_MESSAGE if failed_types else "No opportunities found right now.",
+            "source_status": "unavailable" if fetch_failed else "ok",
+            "message": UNAVAILABLE_MESSAGE if fetch_failed else "No opportunities found right now.",
         }
 
-    # Some data loaded even though another type failed — surface that
-    # partial degradation without hiding the recommendations that did load.
-    partial_message = None
-    if failed_types:
-        labels = " and ".join(_TYPE_LABELS.get(t, t) for t in failed_types)
-        partial_message = f"{labels} data is temporarily unavailable — showing what's currently available."
+    is_beginner = _is_beginner_user(user_skill_map)
 
     scored = []
     extraction_budget = {"remaining": MAX_SKILL_EXTRACTIONS_PER_REQUEST}
-    for opp in opportunities:
+    for opp in pool:
         required_skills = _extract_required_skills(opp, extraction_budget)
         deterministic = match_opportunity_skills(required_skills, user_skill_map)
         scored.append({"opportunity": opp, "required_skills": required_skills, "deterministic": deterministic})
@@ -230,6 +337,12 @@ def get_recommendations(
             why_match = _default_why_match(deterministic)
             recommendation = None
 
+        # Experience-suitability nudge only ever applies on top of a real
+        # skill match — an opportunity with zero deterministic overlap stays
+        # at zero regardless of experience level (Phase 19/23 invariant).
+        if final_score > 0:
+            final_score += _experience_adjustment(opp, is_beginner)
+
         final_results.append({
             "id": opp["id"],
             "title": opp["title"],
@@ -264,5 +377,5 @@ def get_recommendations(
         "recommendations": final_results,
         "user_skill_summary": skill_summary,
         "source_status": "ok",
-        "message": partial_message,
+        "message": None,
     }

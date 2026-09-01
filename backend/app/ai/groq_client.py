@@ -152,10 +152,26 @@ SKILL_EXTRACTION_PROMPT = """Extract the likely technical and professional skill
 TEXT:
 {text}
 
-Return ONLY valid JSON with this exact structure:
-{{"skills": ["skill1", "skill2"]}}
+Return ONLY valid JSON with this exact structure, replacing the example skill
+names below with the REAL skill names you found in the text — never return
+the literal placeholder strings "skill1"/"skill2" themselves:
+{{"skills": ["<real skill name>", "<real skill name>"]}}
+
+If you cannot confidently identify any real skills in the text, return {{"skills": []}} instead of guessing.
 
 IMPORTANT: Return ONLY the JSON object. No thinking, no commentary, no markdown fences."""
+
+
+_PLACEHOLDER_SKILL_PATTERN = re.compile(r"^skill\s*\d*$", re.IGNORECASE)
+
+
+def _is_placeholder_skill(name: str) -> bool:
+    """The skill-extraction prompt's own JSON example uses "skill1"/"skill2"
+    as illustrative placeholder text. Under load a model can echo that
+    example verbatim instead of extracting real skills — never trust the
+    model not to do this; filter it out deterministically rather than
+    relying on prompt wording alone."""
+    return bool(_PLACEHOLDER_SKILL_PATTERN.match(name.strip()))
 
 
 def _strip_thinking_tags(content: str) -> str:
@@ -587,7 +603,8 @@ class GroqAIClient:
                     continue
 
                 validated = ExtractedSkills(skills=[str(s) for s in (data.get("skills") or [])][:10])
-                return validated.skills, None
+                real_skills = [s for s in validated.skills if s.strip() and not _is_placeholder_skill(s)]
+                return real_skills, None
 
             except ValidationError:
                 last_error = "AI response validation failed."

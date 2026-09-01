@@ -24,7 +24,7 @@ def list_opportunity_recommendations(
     current_user: User = Depends(get_current_user),
 ):
     """Personalized job/internship recommendations from live provider data
-    (RapidAPI "Internships API" — Career Site + Job Board endpoints).
+    (JSearch by OpenWeb Ninja, via RapidAPI), scoped to India.
 
     The user is always derived from the authenticated JWT (`current_user`) —
     never from a client-supplied user_id — so this endpoint can only ever
