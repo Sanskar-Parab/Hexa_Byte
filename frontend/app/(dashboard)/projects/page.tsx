@@ -29,8 +29,7 @@ export default function ProjectsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const loadData = useCallback(async () => {
-    const careerId = localStorage.getItem("selectedCareerId");
-    setSelectedCareerId(careerId);
+    let careerId = localStorage.getItem("selectedCareerId");
 
     try {
       const diffData = await api.getUserDifficulty().catch(() => null);
@@ -39,30 +38,34 @@ export default function ProjectsPage() {
         setPreferredDifficulty(diffData.preferred_difficulty || "AUTO");
       }
 
+      let projectData = careerId ? await api.getProjectRecommendations(careerId).catch(() => null) : null;
+
+      if (careerId && projectData === null) {
+        // Stale career_id (e.g. left over from a reset dataset) - drop it and
+        // fall back to the user's current top recommendation below.
+        localStorage.removeItem("selectedCareerId");
+        careerId = null;
+      }
+
+      if (!careerId) {
+        const recs = await api.getStoredRecommendations().catch(() => []);
+        if (recs.length > 0) {
+          careerId = recs[0].career_id;
+          localStorage.setItem("selectedCareerId", careerId);
+          projectData = await api.getProjectRecommendations(careerId).catch(() => []);
+        }
+      }
+
+      setSelectedCareerId(careerId);
+
       if (careerId) {
-        const projectData = await api.getProjectRecommendations(careerId).catch(() => []);
-        setProjects(projectData);
+        setProjects(projectData || []);
 
         const aiData = await api.getAIGeneratedProjects(careerId).catch(() => []);
         setAiProjects(aiData);
 
         const stats = await api.getProjectStats(careerId).catch(() => null);
         setProjectStats(stats);
-      } else {
-        const recs = await api.getStoredRecommendations().catch(() => []);
-        if (recs.length > 0) {
-          const topCareerId = recs[0].career_id;
-          localStorage.setItem("selectedCareerId", topCareerId);
-          setSelectedCareerId(topCareerId);
-          const projectData = await api.getProjectRecommendations(topCareerId).catch(() => []);
-          setProjects(projectData);
-
-          const aiData = await api.getAIGeneratedProjects(topCareerId).catch(() => []);
-          setAiProjects(aiData);
-
-          const stats = await api.getProjectStats(topCareerId).catch(() => null);
-          setProjectStats(stats);
-        }
       }
     } catch {
     } finally {

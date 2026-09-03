@@ -6,6 +6,7 @@ from sqlalchemy import func
 
 from app.database.config import get_db
 from app.models.user import User
+from app.models.career import Career
 from app.models.project import Project, RecommendedProject, AIGeneratedProject
 from app.models.progress import UserProgress
 from app.schemas.project import (
@@ -34,6 +35,10 @@ def list_recommendations(
 ):
     if not career_id:
         raise HTTPException(status_code=400, detail="career_id is required")
+
+    career = db.query(Career).filter(Career.id == career_id).first()
+    if not career:
+        raise HTTPException(status_code=404, detail="Career not found")
 
     results = rank_skill_aware_projects(db, current_user.id, career_id)
 
