@@ -13,6 +13,14 @@ from app.models.project import Project, RecommendedProject, AIGeneratedProject
 from app.models.progress import UserProgress
 from app.models.resume import Resume
 from app.models.job_analysis import JobAnalysis
+from app.models.outcome import (
+    TrainingProgram,
+    TrainingProgramSkill,
+    TrainingEnrollment,
+    EmploymentOutcome,
+    OutcomeCheckIn,
+    OutcomeConsent,
+)
 
 
 def _column_exists(conn, table_name, column_name):
@@ -40,7 +48,21 @@ def run_migrations():
             conn.execute(text("ALTER TABLE roadmap_phases ADD COLUMN updated_at DATETIME"))
         if not _column_exists(conn, "users", "preferred_difficulty"):
             conn.execute(text("ALTER TABLE users ADD COLUMN preferred_difficulty VARCHAR DEFAULT 'AUTO'"))
+        if not _column_exists(conn, "employment_outcomes", "source_opportunity_id"):
+            conn.execute(text("ALTER TABLE employment_outcomes ADD COLUMN source_opportunity_id VARCHAR"))
+        if not _column_exists(conn, "employment_outcomes", "source_opportunity_title"):
+            conn.execute(text("ALTER TABLE employment_outcomes ADD COLUMN source_opportunity_title VARCHAR"))
+        if not _column_exists(conn, "users", "is_admin"):
+            conn.execute(text("ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT 0"))
 
     # Create new tables for Phase 6
     Resume.__table__.create(bind=engine, checkfirst=True)
     JobAnalysis.__table__.create(bind=engine, checkfirst=True)
+
+    # Create new tables for employment outcome tracking (Phase 1)
+    TrainingProgram.__table__.create(bind=engine, checkfirst=True)
+    TrainingProgramSkill.__table__.create(bind=engine, checkfirst=True)
+    TrainingEnrollment.__table__.create(bind=engine, checkfirst=True)
+    EmploymentOutcome.__table__.create(bind=engine, checkfirst=True)
+    OutcomeCheckIn.__table__.create(bind=engine, checkfirst=True)
+    OutcomeConsent.__table__.create(bind=engine, checkfirst=True)

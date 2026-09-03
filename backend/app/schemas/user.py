@@ -20,6 +20,7 @@ class UserResponse(BaseModel):
     name: str
     email: str
     is_demo: bool
+    is_admin: bool
     created_at: datetime
 
     class Config:

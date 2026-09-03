@@ -11,6 +11,7 @@ from app.models.project import Project, RecommendedProject
 from app.models.progress import UserProgress
 from app.models.profile import Profile
 from app.models.skill_evidence import SkillEvidence
+from app.services import outcome_service, training_intelligence
 
 
 ACTION_TYPES = [
@@ -21,6 +22,9 @@ ACTION_TYPES = [
     "UPLOAD_RESUME",
     "ANALYZE_JOB",
     "RETAKE_ASSESSMENT",
+    "IMPROVE_SKILL_FOR_PLACEMENT",
+    "APPLY_OPPORTUNITIES",
+    "EXPLORE_RELEVANT_OPPORTUNITIES",
 ]
 
 
@@ -100,6 +104,21 @@ def compute_next_best_action(
         candidates.append(c)
 
     c = _score_analyze_job(career_recommendation)
+    if c:
+        candidates.append(c)
+
+    # Outcome-aware candidates (Phase 6): connects the training -> placement ->
+    # employment pipeline (Phases 1-3) into the same deterministic scoring
+    # engine, rather than a separate recommendation path.
+    c = _score_improve_for_placement(db, user_id)
+    if c:
+        candidates.append(c)
+
+    c = _score_apply_opportunities(db, user_id)
+    if c:
+        candidates.append(c)
+
+    c = _score_explore_relevant_opportunities(db, user_id)
     if c:
         candidates.append(c)
 
@@ -446,6 +465,119 @@ def _score_analyze_job(career_recommendation: CareerRecommendation | None) -> di
         "target": "Mapped",
         "priority_score": round(score, 4),
         "metadata": {"missing_skills_count": len(missing), "link": "/job-analyzer"},
+    }
+
+
+def _score_improve_for_placement(db: Session, user_id: UUID) -> dict[str, Any] | None:
+    """Score IMPROVE_SKILL_FOR_PLACEMENT — "Student not placement-ready" ->
+    "Improve <skill>". Reuses the exact same deterministic placement
+    readiness (Phase 2) and training-skill-coverage (Phase 2) calculations
+    used elsewhere; introduces no new scoring logic of its own."""
+    enrollments = outcome_service.list_enrollments(db, user_id)
+    if not enrollments:
+        return None
+    enrollment = enrollments[0]  # most recent
+
+    readiness = training_intelligence.calculate_placement_readiness(
+        db, user_id, training_enrollment_id=enrollment.id,
+    )
+    if readiness is None or readiness["is_ready"]:
+        return None
+
+    training = readiness.get("training") or {}
+    coverage = training.get("skill_coverage") or {}
+    gap_skills = coverage.get("gap_skills") or []
+    if not gap_skills:
+        return None
+
+    gap_skill = gap_skills[0]
+    readiness_score = readiness["readiness_score"]
+    score = 0.55 + (1.0 - min(readiness_score, 100) / 100.0) * 0.2
+
+    return {
+        "action_type": "IMPROVE_SKILL_FOR_PLACEMENT",
+        "title": f"Improve {gap_skill}",
+        "description": (
+            f"{gap_skill} is taught in {training.get('training_program_name') or 'your training program'} "
+            f"but not yet demonstrated in your profile — closing this gap directly improves placement readiness."
+        ),
+        "why": f"Placement readiness is {readiness_score}%, below the ready threshold. {gap_skill} is the top training skill gap.",
+        "current": f"{readiness_score}%",
+        "target": "Placement-ready",
+        "skill_name": gap_skill,
+        "priority_score": round(score, 4),
+        "metadata": {
+            "training_enrollment_id": str(enrollment.id),
+            "skill_name": gap_skill,
+            "readiness_score": readiness_score,
+        },
+    }
+
+
+def _score_apply_opportunities(db: Session, user_id: UUID) -> dict[str, Any] | None:
+    """Score APPLY_OPPORTUNITIES — "Completed training but no placement" ->
+    "Apply to 5 relevant entry-level opportunities"."""
+    enrollments = outcome_service.list_enrollments(db, user_id)
+    if not any(e.status == "completed" for e in enrollments):
+        return None
+
+    outcomes = outcome_service.list_employment_outcomes(db, user_id)
+    already_placed = any(
+        o.employment_status in ("placed", "employed", "self_employed") for o in outcomes
+    )
+    if already_placed:
+        return None
+
+    return {
+        "action_type": "APPLY_OPPORTUNITIES",
+        "title": "Apply to 5 Relevant Entry-Level Opportunities",
+        "description": "You've completed training but haven't reported a placement yet. Applying broadens your chances.",
+        "why": "Training is complete with no placement on record — active applications are the direct next step.",
+        "current": "Not placed",
+        "target": "5 applications",
+        "priority_score": 0.70,
+        "metadata": {"link": "/opportunities"},
+    }
+
+
+def _score_explore_relevant_opportunities(db: Session, user_id: UUID) -> dict[str, Any] | None:
+    """Score EXPLORE_RELEVANT_OPPORTUNITIES — "Employed but role is
+    unrelated" -> "Explore relevant opportunities". Reuses the same
+    deterministic training-relevance calculation (Phase 2) used in the
+    student timeline and admin dashboard — never re-derives it."""
+    outcomes = outcome_service.list_employment_outcomes(db, user_id)
+    active = [
+        o for o in outcomes
+        if o.employment_status in ("employed", "self_employed") and not o.employment_end_date
+    ]
+    if not active:
+        return None
+    outcome = active[0]
+    if not outcome.job_title or not outcome.training_enrollment_id:
+        return None
+
+    enrollment = outcome_service.get_enrollment(db, user_id, outcome.training_enrollment_id)
+    program = outcome_service.get_training_program(db, enrollment.training_program_id) if enrollment else None
+    if not program:
+        return None
+
+    training_skills = outcome_service.training_program_skill_names(db, program)
+    skill_map = training_intelligence.get_user_skill_map(db, user_id)
+    relevance = training_intelligence.calculate_training_relevance(
+        db, training_skills, skill_map, employment_job_title=outcome.job_title,
+    )
+    if relevance["level"] not in ("low", "unknown"):
+        return None
+
+    return {
+        "action_type": "EXPLORE_RELEVANT_OPPORTUNITIES",
+        "title": "Explore Roles That Match Your Training",
+        "description": f"Your current role ({outcome.job_title}) doesn't closely match what {program.name} taught you.",
+        "why": f"Training relevance to your current role is {relevance['level']}: {relevance['reason']}",
+        "current": relevance["level"].capitalize(),
+        "target": "High relevance",
+        "priority_score": 0.50,
+        "metadata": {"link": "/opportunities", "employment_outcome_id": str(outcome.id)},
     }
 
 

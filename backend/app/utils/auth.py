@@ -57,3 +57,12 @@ def get_current_user(
     if user is None:
         raise credentials_exception
     return user
+
+
+def get_current_admin_user(current_user: User = Depends(get_current_user)) -> User:
+    """Gate for the government/administrator analytics dashboard — a
+    strictly separate view from the student-facing app. `is_admin` is never
+    settable through any API; it only exists as a seeded/DB-set flag."""
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return current_user

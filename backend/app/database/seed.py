@@ -20,6 +20,7 @@ def seed_if_empty():
         _seed_careers(db)
         _seed_assessment_questions(db)
         _seed_projects(db)
+        _seed_admin_user(db)
         db.commit()
     except Exception as e:
         db.rollback()
@@ -1183,3 +1184,19 @@ def _seed_projects(db):
 
     for data in projects_data:
         db.add(Project(**data))
+
+
+def _seed_admin_user(db):
+    """Seeded once, alongside the rest of the catalog data (only when the
+    DB is completely empty) — the government/administrator analytics
+    dashboard has no self-serve signup or promotion endpoint, so this is
+    the only way an is_admin account exists. Demo credentials only; rotate
+    or remove for a real deployment.
+    """
+    admin = User(
+        name="Ministry Analytics Admin",
+        email="admin@nextpath.gov",
+        password_hash=get_password_hash("Admin@12345"),
+        is_admin=True,
+    )
+    db.add(admin)

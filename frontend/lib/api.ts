@@ -280,4 +280,108 @@ export const api = {
       `/opportunities/recommendations${qs ? `?${qs}` : ""}`
     );
   },
+
+  getOutcomeTimeline: (trainingEnrollmentId?: string) => {
+    const params = trainingEnrollmentId ? `?training_enrollment_id=${trainingEnrollmentId}` : "";
+    return fetcher<import("@/types").OutcomeTimeline>(`/outcomes/timeline${params}`);
+  },
+
+  // --- Outcome reporting (student-facing write flow) ----------------------
+
+  getOutcomeConsent: () =>
+    fetcher<import("@/types").OutcomeConsentState>("/outcomes/consent"),
+
+  submitOutcomeConsent: (consented: boolean) =>
+    fetcher<import("@/types").OutcomeConsentState>("/outcomes/consent", {
+      method: "POST",
+      body: JSON.stringify({ consented }),
+    }),
+
+  listTrainingPrograms: () =>
+    fetcher<import("@/types").TrainingProgram[]>("/outcomes/training"),
+
+  listEnrollments: () =>
+    fetcher<import("@/types").TrainingEnrollment[]>("/outcomes/enrollment"),
+
+  createEnrollment: (trainingProgramId: string) =>
+    fetcher<import("@/types").TrainingEnrollment>("/outcomes/enrollment", {
+      method: "POST",
+      body: JSON.stringify({ training_program_id: trainingProgramId }),
+    }),
+
+  listEmploymentOutcomes: () =>
+    fetcher<import("@/types").EmploymentOutcome[]>("/outcomes/employment"),
+
+  createEmploymentOutcome: (data: {
+    training_enrollment_id?: string;
+    employment_status: string;
+    employment_type?: string;
+    company_name?: string;
+    job_title?: string;
+    location?: string;
+    employment_start_date?: string;
+    salary?: number;
+    salary_currency?: string;
+    salary_period?: string;
+  }) =>
+    fetcher<import("@/types").EmploymentOutcome>("/outcomes/employment", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  createCheckIn: (data: {
+    employment_outcome_id: string;
+    employment_status: string;
+    company_name?: string;
+    job_title?: string;
+    salary?: number;
+    salary_currency?: string;
+    still_employed?: boolean;
+    reason_for_leaving?: string;
+    notes?: string;
+  }) =>
+    fetcher<import("@/types").OutcomeCheckInEntry>("/outcomes/check-in", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  // --- Admin/government skilling-impact analytics (admin-only) -----------
+
+  getAdminOverview: (filters?: import("@/types").AdminAnalyticsFilters) =>
+    fetcher<import("@/types").CohortMetrics>(`/admin/outcomes/overview${adminFilterQuery(filters)}`),
+
+  getAdminProviders: (filters?: import("@/types").AdminAnalyticsFilters) =>
+    fetcher<import("@/types").ProviderComparisonRow[]>(`/admin/outcomes/providers${adminFilterQuery(filters)}`),
+
+  getAdminPrograms: (filters?: import("@/types").AdminAnalyticsFilters) =>
+    fetcher<import("@/types").ProgramAnalyticsRow[]>(`/admin/outcomes/programs${adminFilterQuery(filters)}`),
+
+  getAdminSkillGaps: (filters?: import("@/types").AdminAnalyticsFilters) =>
+    fetcher<import("@/types").SkillGapRow[]>(`/admin/outcomes/skill-gaps${adminFilterQuery(filters)}`),
+
+  getAdminNonPlacement: (filters?: import("@/types").AdminAnalyticsFilters) =>
+    fetcher<import("@/types").NonPlacementCategoryRow[]>(`/admin/outcomes/non-placement${adminFilterQuery(filters)}`),
+
+  getAdminFilterOptions: () =>
+    fetcher<import("@/types").AdminFilterOptions>("/admin/outcomes/filters"),
+
+  getAdminCurriculumRecommendations: (filters?: import("@/types").AdminAnalyticsFilters) =>
+    fetcher<import("@/types").CurriculumRecommendationRow[]>(
+      `/admin/outcomes/curriculum-recommendations${adminFilterQuery(filters)}`
+    ),
+
+  loadAdminDemoData: () =>
+    fetcher<{ message: string; created: boolean; trainees_created: number }>("/admin/outcomes/demo-data", {
+      method: "POST",
+    }),
 };
+
+function adminFilterQuery(filters?: import("@/types").AdminAnalyticsFilters): string {
+  if (!filters) return "";
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) params.set(key, value);
+  });
+  const qs = params.toString();
+  return qs ? `?${qs}` : "";
+}

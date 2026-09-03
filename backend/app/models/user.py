@@ -14,6 +14,7 @@ class User(Base):
     name = Column(String, nullable=False)
     password_hash = Column(String, nullable=False)
     is_demo = Column(Boolean, default=False)
+    is_admin = Column(Boolean, default=False)
     preferred_difficulty = Column(String, default="AUTO")  # AUTO, BEGINNER, INTERMEDIATE, ADVANCED, INDUSTRY
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

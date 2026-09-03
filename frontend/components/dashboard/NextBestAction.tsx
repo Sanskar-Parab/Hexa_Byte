@@ -12,6 +12,8 @@ import {
   CheckCircle,
   ArrowRight,
   Target,
+  Briefcase,
+  Compass,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,6 +31,9 @@ const ACTION_ICONS: Record<string, React.ReactNode> = {
   UPLOAD_RESUME: <FileText className="h-5 w-5" />,
   ANALYZE_JOB: <Search className="h-5 w-5" />,
   RETAKE_ASSESSMENT: <RotateCcw className="h-5 w-5" />,
+  IMPROVE_SKILL_FOR_PLACEMENT: <Target className="h-5 w-5" />,
+  APPLY_OPPORTUNITIES: <Briefcase className="h-5 w-5" />,
+  EXPLORE_RELEVANT_OPPORTUNITIES: <Compass className="h-5 w-5" />,
 };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -39,6 +44,9 @@ const ACTION_LABELS: Record<string, string> = {
   UPLOAD_RESUME: "Upload Resume",
   ANALYZE_JOB: "Analyze a Job",
   RETAKE_ASSESSMENT: "Retake Assessment",
+  IMPROVE_SKILL_FOR_PLACEMENT: "Build Toward This Skill",
+  APPLY_OPPORTUNITIES: "Browse Opportunities",
+  EXPLORE_RELEVANT_OPPORTUNITIES: "Explore Opportunities",
 };
 
 const ACTION_ROUTES: Record<string, (careerId?: string | null) => string> = {
@@ -49,6 +57,9 @@ const ACTION_ROUTES: Record<string, (careerId?: string | null) => string> = {
   UPLOAD_RESUME: () => "/skills",
   ANALYZE_JOB: () => "/careers",
   RETAKE_ASSESSMENT: () => "/assessment",
+  IMPROVE_SKILL_FOR_PLACEMENT: () => "/projects",
+  APPLY_OPPORTUNITIES: () => "/opportunities",
+  EXPLORE_RELEVANT_OPPORTUNITIES: () => "/opportunities",
 };
 
 interface NextBestActionCardProps {

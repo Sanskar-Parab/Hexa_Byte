@@ -3,6 +3,7 @@ export interface User {
   email: string;
   name: string;
   is_demo: boolean;
+  is_admin: boolean;
   created_at: string;
 }
 
@@ -478,4 +479,264 @@ export interface CoachAskResponse {
     projects_completed: number;
     evidence_count: number;
   };
+}
+
+// --- Outcome tracking (Phases 1-3) ---------------------------------------
+
+export type RetentionStatus = "yes" | "no" | "pending" | "unknown" | "not_applicable";
+export type TrainingRelevanceLevel = "high" | "medium" | "low" | "unknown";
+
+export interface OutcomeTrainingBlock {
+  training_program_id: string;
+  training_program_name: string | null;
+  enrollment_status: string;
+  enrollment_date: string;
+  completion_date: string | null;
+  certificate_status: string | null;
+}
+
+export interface OutcomePlacementBlock {
+  employment_outcome_id: string;
+  employment_status: string;
+  source_opportunity_id: string | null;
+  source_opportunity_title: string | null;
+  verified: boolean;
+}
+
+export interface OutcomeEmploymentBlock {
+  company_name: string | null;
+  job_title: string | null;
+  employment_type: string | null;
+  employment_start_date: string | null;
+  employment_end_date: string | null;
+  is_remote: boolean | null;
+}
+
+export interface OutcomeCheckInSummary {
+  id: string;
+  check_in_date: string;
+  months_since_employment: number | null;
+  employment_status: string;
+  company_name: string | null;
+  job_title: string | null;
+  salary: number | null;
+  salary_currency: string | null;
+  salary_period: string | null;
+  training_relevance: string | null;
+  still_employed: boolean | null;
+  reason_for_leaving: string | null;
+  notes: string | null;
+}
+
+export interface OutcomeMilestone {
+  milestone_date: string;
+  reached: boolean;
+  retention: RetentionStatus;
+  employment_status: string | null;
+  check_in_date: string | null;
+}
+
+export interface SalarySnapshot {
+  amount: number;
+  currency: string | null;
+  period: string | null;
+  date: string;
+}
+
+export interface SalaryChange {
+  from_date: string;
+  to_date: string;
+  absolute_change: number;
+  percentage_change: number | null;
+}
+
+export interface SalaryProgression {
+  initial: SalarySnapshot | null;
+  at_3_months: SalarySnapshot | null;
+  at_6_months: SalarySnapshot | null;
+  at_12_months: SalarySnapshot | null;
+  changes: SalaryChange[];
+}
+
+export interface TrainingRelevanceEntry {
+  as_of_date: string;
+  months_since_employment: number | null;
+  job_title: string;
+  level: TrainingRelevanceLevel;
+  reason: string;
+  overlap_skills: string[];
+  coverage_ratio: number;
+}
+
+export interface OutcomeTimeline {
+  training: OutcomeTrainingBlock | null;
+  placement: OutcomePlacementBlock | null;
+  employment: OutcomeEmploymentBlock | null;
+  check_ins: OutcomeCheckInSummary[];
+  milestones: {
+    "3_month": OutcomeMilestone | null;
+    "6_month": OutcomeMilestone | null;
+    "12_month": OutcomeMilestone | null;
+  };
+  retention: {
+    "3_month": RetentionStatus;
+    "6_month": RetentionStatus;
+    "12_month": RetentionStatus;
+  };
+  salary_progression: SalaryProgression;
+  training_relevance_over_time: TrainingRelevanceEntry[];
+}
+
+// --- Government/administrator skilling-impact analytics (Phase 5) --------
+
+export interface CohortMetrics {
+  trainee_count: number;
+  demo_trainee_count: number;
+  sample_size_sufficient: boolean;
+  training_completion_rate: number | null;
+  placement_rate: number | null;
+  employment_rate: number | null;
+  self_employment_rate: number | null;
+  unemployment_rate: number | null;
+  non_placement_rate: number | null;
+  retention_3_month_rate: number | null;
+  retention_6_month_rate: number | null;
+  retention_12_month_rate: number | null;
+  average_starting_salary: number | null;
+  average_current_salary: number | null;
+  wage_growth_percentage: number | null;
+  training_relevant_employment_rate: number | null;
+}
+
+export interface ProviderComparisonRow extends CohortMetrics {
+  provider_name: string;
+}
+
+export interface SkillGapRow {
+  skill: string;
+  trainee_count: number;
+  percentage: number | null;
+}
+
+export interface ProgramAnalyticsRow extends CohortMetrics {
+  training_program_id: string;
+  training_program_name: string;
+  provider_name: string;
+  career_domain: string | null;
+  skill_gaps: SkillGapRow[];
+}
+
+export interface NonPlacementCategoryRow {
+  category: string;
+  trainee_count: number;
+  percentage: number | null;
+}
+
+export interface AdminFilterOptions {
+  providers: string[];
+  career_domains: string[];
+  programs: { id: string; name: string; provider_name: string }[];
+  locations: string[];
+  employment_statuses: string[];
+}
+
+export interface AdminAnalyticsFilters {
+  start_date?: string;
+  end_date?: string;
+  provider_name?: string;
+  training_program_id?: string;
+  career_domain?: string;
+  location?: string;
+  employment_status?: string;
+}
+
+export interface CurriculumRecommendationRow {
+  training_program_id: string;
+  training_program_name: string;
+  provider_name: string;
+  skill: string;
+  affected_trainee_percentage: number | null;
+  program_placement_rate: number | null;
+  overall_placement_rate: number | null;
+  recommendation: string;
+}
+
+// --- Outcome reporting (student-facing write flow) ------------------------
+
+export interface TrainingProgram {
+  id: string;
+  name: string;
+  provider_name: string;
+  description: string | null;
+  skills: string[];
+  career_domain: string | null;
+  location: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  certification: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TrainingEnrollment {
+  id: string;
+  user_id: string;
+  training_program_id: string;
+  enrollment_date: string;
+  completion_date: string | null;
+  status: string;
+  attendance_percentage: number | null;
+  assessment_score: number | null;
+  certificate_status: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EmploymentOutcome {
+  id: string;
+  user_id: string;
+  training_enrollment_id: string | null;
+  employment_status: string;
+  employment_type: string | null;
+  company_name: string | null;
+  job_title: string | null;
+  industry: string | null;
+  location: string | null;
+  country: string | null;
+  is_remote: boolean | null;
+  employment_start_date: string | null;
+  employment_end_date: string | null;
+  salary: number | null;
+  salary_currency: string | null;
+  salary_period: string | null;
+  source: string | null;
+  verified: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OutcomeCheckInEntry {
+  id: string;
+  employment_outcome_id: string;
+  check_in_date: string;
+  months_since_employment: number | null;
+  employment_status: string;
+  company_name: string | null;
+  job_title: string | null;
+  salary: number | null;
+  salary_currency: string | null;
+  salary_period: string | null;
+  training_relevance: string | null;
+  still_employed: boolean | null;
+  reason_for_leaving: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface OutcomeConsentState {
+  user_id: string;
+  consented: boolean;
+  consent_date: string | null;
+  revoked_at: string | null;
 }

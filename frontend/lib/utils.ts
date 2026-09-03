@@ -62,6 +62,22 @@ export function getStatusColor(status: string): string {
   }
 }
 
+export function formatCurrency(amount: number, currency?: string | null): string {
+  try {
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: currency || "INR",
+      maximumFractionDigits: 0,
+    }).format(amount);
+  } catch {
+    return `${currency || ""} ${amount.toLocaleString("en-IN")}`.trim();
+  }
+}
+
+export function formatPercent(value: number | null | undefined): string {
+  return value === null || value === undefined ? "No data" : `${value}%`;
+}
+
 export function formatStatusLabel(status: string): string {
   switch (status?.toLowerCase()) {
     case "completed":

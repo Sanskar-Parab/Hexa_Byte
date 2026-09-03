@@ -2,7 +2,7 @@
 
 **Your Career Path, Personalized by AI**
 
-Next Path AI is an AI-powered career guidance platform that analyzes your skills, interests, and goals to recommend personalized career paths with actionable roadmaps, skill gap analysis, AI coaching, and much more.
+Next Path AI is an AI-powered career guidance platform that analyzes your skills, interests, and goals to recommend personalized career paths with actionable roadmaps, skill gap analysis, AI coaching, and much more. It also includes a full employment outcome tracking system — built for the Maharashtra Government "Smart Education" problem statement — that follows students from training enrollment through placement and retention, and surfaces privacy-preserving, cohort-level analytics to government/provider stakeholders through a dedicated admin dashboard.
 
 ---
 
@@ -46,7 +46,7 @@ Next Path AI is an AI-powered career guidance platform that analyzes your skills
 ### Adaptive Systems
 - **Adaptive Roadmaps** — Phases auto-adapt based on proficiency (skip adapted phases, reduce duration for known skills)
 - **Adaptive Event System** — Cascading updates triggered by skill assessments, project completions, resume/job analyses
-- **Next Best Action** — AI-powered prioritization of 7 action types by career impact
+- **Next Best Action** — AI-powered prioritization of 10 action types by career impact, including 3 outcome-aware types triggered by placement/employment state
 - **Skill-Aware Projects** — Composite scoring combining career relevance, gap relevance, roadmap relevance, and difficulty fit
 
 ### AI Integration
@@ -55,6 +55,25 @@ Next Path AI is an AI-powered career guidance platform that analyzes your skills
 - **AI Project Generation** — Generate custom project recommendations based on skill levels, gaps, and roadmap phase
 - **Conversation-Aware Coaching** — Coach maintains chat history for follow-up questions (e.g., "Why?", "Tell me more") while always re-fetching fresh user context from the database
 - **Security Hardening** — Prompt injection protection, evidence source transparency (assessed vs. self-reported vs. project-backed), and strict context-only data usage
+
+### Employment Outcome Tracking (Career Outcomes)
+Built for the Maharashtra Government "Smart Education" problem statement — tracking employment outcomes, skill gaps, and skilling-initiative impact across training providers, not just individual career guidance.
+- **Consent-Gated Reporting** — Students opt in before any outcome data is recorded; consent can be revoked at any time, and revocation is honored everywhere outcome data is read or aggregated
+- **Training Enrollment & Placement** — Students self-report training program enrollment, placement/employment status (placed, employed, self-employed, looking for work, not employed), job title, company, location, and salary — all optional beyond status
+- **Longitudinal Check-Ins** — Periodic check-ins track continued employment, salary progression, and reasons for leaving (never required, since the honest case is "still employed")
+- **Deterministic Training-Skill Relevance** — Job title/skills are matched against training program skills with a transparent, non-AI relevance score and label (see [How the Relevance Engine Works](#career-outcomes-how-the-relevance-engine-works))
+- **Placement Readiness Scoring** — Deterministic score combining skill coverage, evidence confidence, and training completion
+- **AI-Assisted Analysis (advisory only)** — Non-placement reason analysis, attrition risk analysis, and plain-language relevance explanations, each clearly separated from the deterministic numbers that drive scoring and never used to compute them
+- **Adaptive Curriculum Loop** — Recurring skill gaps across a training program's outcomes feed back into curriculum recommendations for that program
+- **Outcome-Aware Next Best Action** — 3 additional action types (`IMPROVE_SKILL_FOR_PLACEMENT`, `APPLY_OPPORTUNITIES`, `EXPLORE_RELEVANT_OPPORTUNITIES`) triggered by a student's placement/employment state, alongside the original 7
+
+### Government Admin Dashboard (Privacy-Preserving Analytics)
+A separate `is_admin`-gated area for tracking skilling-initiative impact in aggregate, without exposing any individual's data.
+- **Cohort-Level Aggregation Only** — Every metric is computed over a cohort; any cohort smaller than `MIN_COHORT_SIZE` (5) is suppressed rather than shown, so a small group can never be re-identified
+- **Overview, Provider, Program & Retention Views** — Placement rate, average salary, retention curves, and provider/program comparison, each filterable by date range, provider, and program
+- **Skill Gap & Non-Placement Analysis** — Aggregate view of the most common missing skills and reasons students remain unplaced
+- **Curriculum Recommendations** — Surfaces recurring skill gaps (≥30% of a cohort) as concrete curriculum suggestions per program
+- **Demo Dataset Labeling** — Synthetic demo data (`is_demo` users, `(Demo)`-suffixed providers) is clearly labeled and counted separately in every view — including a deliberately sub-`MIN_COHORT_SIZE` provider, to demonstrate suppression behavior — never silently mixed into real numbers
 
 ---
 
@@ -94,22 +113,25 @@ Next Path AI is an AI-powered career guidance platform that analyzes your skills
 nextpath/
 ├── backend/
 │   ├── app/
-│   │   ├── main.py              # FastAPI entry point
-│   │   ├── api/                 # Route handlers (auth, profile, careers, etc.)
-│   │   ├── models/              # SQLAlchemy ORM models (20+ models)
-│   │   ├── schemas/             # Pydantic request/response schemas
-│   │   ├── services/            # Business logic (matching, gaps, roadmaps, etc.)
-│   │   ├── database/            # DB config, migrations, seed data
+│   │   ├── main.py              # FastAPI entry point (CORS, router registration)
+│   │   ├── api/                 # Route handlers (auth, profile, careers, outcomes, admin_analytics, etc.)
+│   │   ├── models/              # SQLAlchemy ORM models, incl. outcome.py (training/enrollment/employment/check-in/consent)
+│   │   ├── schemas/             # Pydantic request/response schemas, incl. outcome*.py
+│   │   ├── services/            # Business logic — matching, gaps, roadmaps, next_best_action,
+│   │   │                        #   training_intelligence, admin_analytics, outcome_*, demo_outcome_seed
+│   │   ├── database/            # DB config, migrations, seed data (incl. admin user + demo outcome data)
 │   │   ├── ai/                  # OpenAI & Groq integration
-│   │   └── utils/               # Auth utilities
-│   ├── tests/                   # 340+ backend tests
+│   │   └── utils/               # Auth utilities (incl. admin-only dependency)
+│   ├── tests/                   # 612+ backend tests
 │   └── requirements.txt         # Python dependencies
 │
 └── frontend/
     ├── app/
     │   ├── page.tsx             # Landing page
     │   ├── (auth)/              # Login & register pages
-    │   └── (dashboard)/         # Authenticated routes
+    │   ├── admin/               # Government admin dashboard (is_admin-gated, separate layout)
+    │   │   └── outcomes/        # Cohort analytics: overview, providers, programs, retention, skill gaps
+    │   └── (dashboard)/         # Authenticated student routes
     │       ├── dashboard/       # Main dashboard
     │       ├── onboarding/      # Multi-step profile setup
     │       ├── assessment/      # Career fit assessment + results
@@ -120,7 +142,8 @@ nextpath/
     │       ├── coach/           # AI career coach
     │       ├── resume/          # Resume upload & parsing
     │       ├── job-analyzer/    # Job description analysis
-    │       └── opportunities/   # AI-personalized jobs & internships (live provider data)
+    │       ├── opportunities/   # AI-personalized jobs & internships (live provider data)
+    │       └── outcomes/        # Career Outcomes — report placement/employment, check-ins, timeline
     ├── components/              # Reusable UI components
     │   ├── ui/                  # Base UI primitives (shadcn/ui)
     │   ├── landing/             # Landing page sections
@@ -133,10 +156,13 @@ nextpath/
     │   ├── coach/               # Chat interface
     │   ├── resume/              # Resume uploader & results
     │   ├── job/                 # Job analyzer & match results
-    │   └── opportunities/       # Opportunity cards (match score, skill gaps, apply)
+    │   ├── opportunities/       # Opportunity cards (match score, skill gaps, apply)
+    │   ├── outcomes/            # Timeline, salary progression, check-in history, report form
+    │   └── admin/               # Metric cards, filter bar, charts, provider/program tables,
+    │                            #   curriculum recommendations, demo dataset banner
     ├── hooks/                   # Custom React hooks (useAuth)
-    ├── lib/                     # API client (40+ methods) and utilities
-    └── types/                   # TypeScript interfaces (438 lines)
+    ├── lib/                     # API client and utilities
+    └── types/                   # TypeScript interfaces
 ```
 
 ---
@@ -220,6 +246,11 @@ OPPORTUNITY_DETERMINISTIC_WEIGHT=0.6
 OPPORTUNITY_AI_WEIGHT=0.4
 OPPORTUNITY_AI_TOP_N=5
 OPPORTUNITY_MAX_SKILL_EXTRACTIONS=20
+
+# Comma-separated frontend origin(s) allowed to call this API (CORS).
+# Unset in dev, this defaults to http://localhost:3000,http://localhost:3001.
+# Set explicitly to your real frontend origin(s) in production.
+CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001
 ```
 
 > **Note:** The frontend requires no environment variables — API calls are proxied via Next.js rewrites.
@@ -355,6 +386,36 @@ OPPORTUNITY_MAX_SKILL_EXTRACTIONS=20
 |--------|----------|-------------|
 | POST | `/api/demo/load` | Load demo data |
 
+### Career Outcomes (student-facing, consent-gated)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET/POST | `/api/outcomes/consent` | Get or set outcome-tracking consent (required before any outcome write) |
+| GET | `/api/outcomes/training` | List training programs |
+| POST | `/api/outcomes/training` | Create a training program (provider-side) |
+| GET/POST | `/api/outcomes/enrollment` | List the user's enrollments / enroll in a training program |
+| GET/POST | `/api/outcomes/employment` | List the user's employment outcomes / report placement or employment |
+| GET/POST | `/api/outcomes/check-in` and `/api/outcomes/check-ins` | Submit a longitudinal check-in / list check-in history |
+| GET | `/api/outcomes/timeline` | Full timeline: training, placement, salary progression, check-ins, summary |
+| GET | `/api/outcomes/{training_program_id}/skill-match` | Deterministic training-to-skill match detail |
+| GET | `/api/outcomes/{training_program_id}/relevance` | Deterministic training-to-job relevance score + label |
+| GET | `/api/outcomes/readiness` | Placement readiness score |
+| GET | `/api/outcomes/opportunities` | Opportunities relevant to the user's training |
+| GET | `/api/outcomes/analysis/non-placement` | AI-assisted (advisory only) reason analysis for non-placement |
+| GET | `/api/outcomes/analysis/attrition` | AI-assisted (advisory only) attrition risk analysis |
+| GET | `/api/outcomes/analysis/relevance-explanation` | AI-assisted (advisory only) plain-language relevance explanation |
+
+### Admin Analytics (government dashboard, `is_admin`-gated)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/admin/outcomes/overview` | Cohort-level placement/salary/retention metrics (suppressed below `MIN_COHORT_SIZE`) |
+| GET | `/api/admin/outcomes/providers` | Provider comparison |
+| GET | `/api/admin/outcomes/programs` | Program-level analytics |
+| GET | `/api/admin/outcomes/skill-gaps` | Aggregate skill gap analysis |
+| GET | `/api/admin/outcomes/non-placement` | Aggregate non-placement reason breakdown |
+| GET | `/api/admin/outcomes/curriculum-recommendations` | Curriculum suggestions from recurring skill gaps (≥30% of cohort) |
+| GET | `/api/admin/outcomes/filters` | Available filter options (providers, programs, date ranges) |
+| POST | `/api/admin/outcomes/demo-data` | Seed idempotent, clearly-labeled demo outcome data |
+
 ### System
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -376,6 +437,9 @@ OPPORTUNITY_MAX_SKILL_EXTRACTIONS=20
 10. **Chat with AI Coach** — context-aware career coaching with conversation history for follow-ups (e.g., "Why?", "Tell me more"), evidence source transparency, and security hardening
 11. **Take AI skill assessments** — Groq-powered MCQs with proficiency scoring
 12. **Browse Jobs & Internships** — see real opportunities ranked by how well they match your demonstrated skills, with clear reasoning and a direct link to close each gap
+13. **Track Career Outcomes** — opt in to outcome tracking, enroll in a training program, report your placement or employment, and add periodic check-ins; see your full timeline, salary progression, and training-to-job relevance score
+
+For government/provider stakeholders, an `is_admin` account instead sees an **Admin Dashboard** (`/admin/outcomes`) with cohort-level placement, retention, skill-gap, and curriculum-impact analytics — see [Career Outcomes: How the Relevance Engine Works](#career-outcomes-how-the-relevance-engine-works) and the [Admin Analytics](#admin-analytics-government-dashboard-is_admin-gated) endpoints above.
 
 ---
 
@@ -417,6 +481,30 @@ Every opportunity returned originates from the live provider — there is no loc
 
 ---
 
+## Career Outcomes: How the Relevance Engine Works
+
+```
+Student opts in (POST /api/outcomes/consent) — nothing below runs without this
+  → enrolls in a training program (POST /api/outcomes/enrollment)
+  → reports placement/employment (POST /api/outcomes/employment)
+      job title + company + salary, all optional beyond status
+  → deterministic training-to-job relevance (app.services.training_intelligence)
+      training program's skills vs. the job title/role — keyword + skill-normalization
+      matching, same alias layer used by opportunity matching, no AI call
+      → relevance score (0-100) + label (e.g. HIGH RELEVANCE), always explainable
+  → placement readiness score — skill coverage + evidence confidence + training completion
+  → periodic check-ins (POST /api/outcomes/check-in) extend the timeline:
+      still-employed status, salary, optional reason for leaving
+  → GET /api/outcomes/timeline assembles training + placement + salary progression + check-ins
+  → AI-assisted analysis (non-placement reasons, attrition risk, plain-language relevance
+    explanation) is generated separately and labeled advisory-only — it explains the
+    deterministic numbers, it never computes or overrides them
+```
+
+Every number a government administrator sees on `/admin/outcomes` is an aggregation of these same deterministic, per-student records — never an AI estimate, and never shown for a cohort smaller than `MIN_COHORT_SIZE` (5), regardless of role or filter.
+
+---
+
 ## Pre-Seeded Data
 
 - **100+ skills** across 15 categories (Programming, Web Dev, Data Science, DevOps, Cloud, Soft Skills, Database, Design, Security, Management, Tools, Academic, Blockchain, AR/VR, Quality)
@@ -424,6 +512,19 @@ Every opportunity returned originates from the live provider — there is no loc
 - **22+ career paths** with required skills, importance weights, and learning sequences
 - **20 assessment questions** measuring 8 cognitive dimensions
 - **13+ project recommendations** tied to career paths
+- **1 pre-seeded admin account** (`admin@nextpath.gov`) for the government dashboard
+- **Idempotent demo outcome dataset** (`POST /api/admin/outcomes/demo-data`) — 11 synthetic trainees across two clearly-labeled `(Demo)` providers, one deliberately below `MIN_COHORT_SIZE` to demonstrate suppression
+
+---
+
+## Demo & Admin Access
+
+| Role | How to access | Credentials |
+|------|----------------|-------------|
+| Student (demo) | `POST /api/demo/load` (also wired to a "Try Demo" button on the frontend) loads a fully pre-filled profile (Aarav Sharma) and returns a JWT | — |
+| Government admin | Log in at `/login` | `admin@nextpath.gov` / `Admin@12345` (demo credentials — rotate before any real deployment) |
+
+An `is_admin` account is routed to `/admin/outcomes`; a regular student account is routed to `/dashboard`. The two views share no data path — the admin dashboard only ever reads aggregated cohort metrics, never a specific student's record.
 
 ---
 
@@ -443,7 +544,7 @@ Every opportunity returned originates from the live provider — there is no loc
 | Command | Description |
 |---------|-------------|
 | `uvicorn app.main:app --reload` | Start dev server with auto-reload |
-| `pytest` | Run tests (340+ tests) |
+| `pytest` | Run tests (612+ tests) |
 
 ---
 

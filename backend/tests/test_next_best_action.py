@@ -390,9 +390,12 @@ class TestNextBestActionIntegration:
         assert result["action"] is None
 
     def test_all_action_types_valid(self):
-        assert len(ACTION_TYPES) == 7
-        expected = {"ASSESS_SKILL", "START_PHASE", "COMPLETE_PHASE",
-                    "BUILD_PROJECT", "UPLOAD_RESUME", "ANALYZE_JOB", "RETAKE_ASSESSMENT"}
+        assert len(ACTION_TYPES) == 10
+        expected = {
+            "ASSESS_SKILL", "START_PHASE", "COMPLETE_PHASE", "BUILD_PROJECT",
+            "UPLOAD_RESUME", "ANALYZE_JOB", "RETAKE_ASSESSMENT",
+            "IMPROVE_SKILL_FOR_PLACEMENT", "APPLY_OPPORTUNITIES", "EXPLORE_RELEVANT_OPPORTUNITIES",
+        }
         assert set(ACTION_TYPES) == expected
 
     def test_scores_are_deterministic(self):

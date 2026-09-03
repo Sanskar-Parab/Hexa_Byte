@@ -47,6 +47,37 @@ class ExtractedSkills(BaseModel):
     skills: list[str]
 
 
+class NonPlacementAIAnalysis(BaseModel):
+    """Raw AI output for why a trainee hasn't been placed yet.
+
+    supporting_evidence_ids are only ever ids from the evidence list the
+    caller supplied — the service layer (app.services.outcome_ai_analysis)
+    cross-validates them against that known set before using them, so an id
+    the model invents can never surface as if it were real evidence.
+    """
+    primary_reason: str
+    supporting_evidence_ids: list[str]
+    recommended_intervention: str
+
+
+class AttritionAIAnalysis(BaseModel):
+    """Raw AI output for why a trainee's employment ended. `category` is
+    re-validated against the fixed category set server-side — an
+    out-of-vocabulary value from the model is coerced to "unknown" rather
+    than trusted."""
+    category: str
+    primary_reason: str
+    supporting_evidence_ids: list[str]
+    recommended_intervention: str
+
+
+class TrainingRelevanceAIExplanation(BaseModel):
+    """Narration only — deliberately has no `level`/score field, so there is
+    no way for this response to override the deterministic relevance score
+    computed by app.services.training_intelligence.calculate_training_relevance."""
+    explanation: str
+
+
 QUESTION_GENERATION_PROMPT = """You are a technical skill assessment system. Generate exactly 10 multiple-choice questions to assess a user's proficiency in {skill_name}.
 
 SKILL TO ASSESS: {skill_name}
@@ -158,6 +189,73 @@ the literal placeholder strings "skill1"/"skill2" themselves:
 {{"skills": ["<real skill name>", "<real skill name>"]}}
 
 If you cannot confidently identify any real skills in the text, return {{"skills": []}} instead of guessing.
+
+IMPORTANT: Return ONLY the JSON object. No thinking, no commentary, no markdown fences."""
+
+
+NON_PLACEMENT_PROMPT = """You are an employment-outcomes analyst reviewing why a training program graduate has not yet been placed in a job.
+
+You may ONLY reason from the EVIDENCE list below — every fact you reference must be one of these exact entries. Do NOT invent, assume, or infer any fact that is not explicitly listed. If the evidence is thin, say so plainly instead of speculating.
+
+EVIDENCE (id: statement):
+{evidence_lines}
+
+TARGET CAREER: {target_career}
+
+TASK:
+1. Identify the single most likely primary reason for non-placement, grounded ONLY in the evidence above. Phrase it as an inference ("appears to be...", "is likely...", "may be..."), never as a certain fact.
+2. List the evidence ids (from the list above, verbatim) that support this reason. Never invent new ids, and never include an id that doesn't genuinely support your reasoning.
+3. Recommend ONE concrete, actionable intervention tied directly to the cited evidence.
+
+Return ONLY valid JSON with this exact structure:
+{{
+  "primary_reason": "one or two sentences, framed as an inference, not a certainty",
+  "supporting_evidence_ids": ["id1", "id2"],
+  "recommended_intervention": "one concrete, specific next action"
+}}
+
+IMPORTANT: Return ONLY the JSON object. No thinking, no commentary, no markdown fences."""
+
+
+ATTRITION_PROMPT = """You are an employment-outcomes analyst reviewing why a training program graduate's employment ended.
+
+You may ONLY reason from the EVIDENCE list below — every fact you reference must be one of these exact entries. Do NOT invent, assume, or infer any fact that is not explicitly listed.
+
+EVIDENCE (id: statement):
+{evidence_lines}
+
+TASK:
+1. Classify the most likely reason into EXACTLY ONE of these categories: skill_mismatch, role_mismatch, location, salary, career_change, unknown.
+   Use "unknown" whenever the evidence doesn't clearly point to one specific category — never guess a specific category just to avoid saying unknown.
+2. State the primary reason in one or two sentences, framed as an inference ("appears to be...", "is likely..."), never as a certainty, grounded ONLY in the evidence above.
+3. List the evidence ids (verbatim from the list above) that support this reason. Never invent new ids.
+4. Recommend ONE concrete, actionable intervention.
+
+Return ONLY valid JSON with this exact structure:
+{{
+  "category": "skill_mismatch|role_mismatch|location|salary|career_change|unknown",
+  "primary_reason": "one or two sentences, framed as an inference",
+  "supporting_evidence_ids": ["id1"],
+  "recommended_intervention": "one concrete, specific next action"
+}}
+
+IMPORTANT: Return ONLY the JSON object. No thinking, no commentary, no markdown fences."""
+
+
+TRAINING_RELEVANCE_EXPLANATION_PROMPT = """You are explaining a training-relevance score to a student. The score has ALREADY been calculated by a separate deterministic system and is FINAL — you are only narrating it, never changing, contradicting, or restating it as a different level.
+
+DETERMINISTIC RESULT (treat as ground truth; do not alter):
+Relevance level: {level}
+Training skills: {training_skills}
+Job title: {job_title}
+Skills that overlap with the job: {overlap_skills}
+Coverage ratio: {coverage_ratio}
+
+TASK:
+Write a short (1-3 sentence), plain-language explanation of why the relevance level is {level}, referencing only the overlap information above. Do not mention any other possible level.
+
+Return ONLY valid JSON with this exact structure:
+{{"explanation": "1-3 sentence explanation"}}
 
 IMPORTANT: Return ONLY the JSON object. No thinking, no commentary, no markdown fences."""
 
@@ -613,6 +711,190 @@ class GroqAIClient:
                 last_error = f"AI service error: {type(e).__name__}"
 
         return None, last_error or "AI failed to extract skills after multiple attempts."
+
+    def analyze_non_placement(
+        self,
+        evidence: list[dict],
+        target_career: Optional[str],
+    ) -> tuple[Optional[NonPlacementAIAnalysis], Optional[str]]:
+        """Explains why a trainee hasn't been placed, grounded only in the
+        deterministic `evidence` the caller computed (see
+        app.services.outcome_ai_analysis) — never fetches or infers facts of
+        its own. `evidence` is a list of {"id": str, "statement": str}."""
+        if not self.is_available:
+            return None, self._error_message or "AI service not available"
+
+        evidence_lines = "\n".join(f"- {e['id']}: {e['statement']}" for e in evidence) or "(none)"
+        prompt = NON_PLACEMENT_PROMPT.format(
+            evidence_lines=evidence_lines,
+            target_career=target_career or "Not specified",
+        )
+
+        candidate_models = self._get_candidate_models()
+        last_error = None
+
+        for model in candidate_models:
+            for attempt in range(2):
+                try:
+                    response = self._client.chat.completions.create(
+                        model=model,
+                        messages=[
+                            {"role": "system", "content": "Return ONLY valid JSON. No thinking, no commentary, no markdown."},
+                            {"role": "user", "content": prompt},
+                        ],
+                        temperature=0.3,
+                        max_tokens=600,
+                        timeout=20,
+                    )
+                    content = response.choices[0].message.content
+                    if not content:
+                        continue
+
+                    data = _extract_json_from_response(content)
+                    if data is None:
+                        continue
+
+                    validated = NonPlacementAIAnalysis(
+                        primary_reason=str(data.get("primary_reason") or ""),
+                        supporting_evidence_ids=[str(x) for x in (data.get("supporting_evidence_ids") or [])][:10],
+                        recommended_intervention=str(data.get("recommended_intervention") or ""),
+                    )
+                    if not validated.primary_reason.strip() or not validated.recommended_intervention.strip():
+                        logger.warning(f"Model {model} attempt {attempt + 1}: non-placement analysis missing required text")
+                        continue
+
+                    return validated, None
+
+                except ValidationError as e:
+                    logger.warning(f"Non-placement analysis validation failed on model {model}: {e}")
+                    last_error = "AI response validation failed."
+                except Exception as e:
+                    logger.error(f"Groq non-placement analysis error on model {model} attempt {attempt + 1}: {type(e).__name__}: {e}")
+                    last_error = f"AI service error: {type(e).__name__}"
+                    break
+
+        return None, last_error or "AI failed to analyze non-placement after multiple attempts."
+
+    def analyze_attrition(
+        self,
+        evidence: list[dict],
+    ) -> tuple[Optional[AttritionAIAnalysis], Optional[str]]:
+        """Explains why a trainee's employment ended, grounded only in the
+        deterministic `evidence` the caller computed. `evidence` is a list of
+        {"id": str, "statement": str}."""
+        if not self.is_available:
+            return None, self._error_message or "AI service not available"
+
+        evidence_lines = "\n".join(f"- {e['id']}: {e['statement']}" for e in evidence) or "(none)"
+        prompt = ATTRITION_PROMPT.format(evidence_lines=evidence_lines)
+
+        candidate_models = self._get_candidate_models()
+        last_error = None
+
+        for model in candidate_models:
+            for attempt in range(2):
+                try:
+                    response = self._client.chat.completions.create(
+                        model=model,
+                        messages=[
+                            {"role": "system", "content": "Return ONLY valid JSON. No thinking, no commentary, no markdown."},
+                            {"role": "user", "content": prompt},
+                        ],
+                        temperature=0.3,
+                        max_tokens=600,
+                        timeout=20,
+                    )
+                    content = response.choices[0].message.content
+                    if not content:
+                        continue
+
+                    data = _extract_json_from_response(content)
+                    if data is None:
+                        continue
+
+                    validated = AttritionAIAnalysis(
+                        category=str(data.get("category") or "unknown"),
+                        primary_reason=str(data.get("primary_reason") or ""),
+                        supporting_evidence_ids=[str(x) for x in (data.get("supporting_evidence_ids") or [])][:10],
+                        recommended_intervention=str(data.get("recommended_intervention") or ""),
+                    )
+                    if not validated.primary_reason.strip() or not validated.recommended_intervention.strip():
+                        logger.warning(f"Model {model} attempt {attempt + 1}: attrition analysis missing required text")
+                        continue
+
+                    return validated, None
+
+                except ValidationError as e:
+                    logger.warning(f"Attrition analysis validation failed on model {model}: {e}")
+                    last_error = "AI response validation failed."
+                except Exception as e:
+                    logger.error(f"Groq attrition analysis error on model {model} attempt {attempt + 1}: {type(e).__name__}: {e}")
+                    last_error = f"AI service error: {type(e).__name__}"
+                    break
+
+        return None, last_error or "AI failed to analyze attrition after multiple attempts."
+
+    def explain_training_relevance(
+        self,
+        level: str,
+        training_skills: list[str],
+        job_title: str,
+        overlap_skills: list[str],
+        coverage_ratio: float,
+    ) -> tuple[Optional[TrainingRelevanceAIExplanation], Optional[str]]:
+        """Narrates a deterministic relevance level in plain language. The
+        level itself is a required prompt input, not something the model is
+        ever asked to produce — see TrainingRelevanceAIExplanation."""
+        if not self.is_available:
+            return None, self._error_message or "AI service not available"
+
+        prompt = TRAINING_RELEVANCE_EXPLANATION_PROMPT.format(
+            level=level.upper(),
+            training_skills=", ".join(training_skills) or "None listed",
+            job_title=job_title or "Not specified",
+            overlap_skills=", ".join(overlap_skills) or "None",
+            coverage_ratio=coverage_ratio,
+        )
+
+        candidate_models = self._get_candidate_models()
+        last_error = None
+
+        for model in candidate_models:
+            for attempt in range(2):
+                try:
+                    response = self._client.chat.completions.create(
+                        model=model,
+                        messages=[
+                            {"role": "system", "content": "Return ONLY valid JSON. No thinking, no commentary, no markdown."},
+                            {"role": "user", "content": prompt},
+                        ],
+                        temperature=0.3,
+                        max_tokens=300,
+                        timeout=15,
+                    )
+                    content = response.choices[0].message.content
+                    if not content:
+                        continue
+
+                    data = _extract_json_from_response(content)
+                    if data is None:
+                        continue
+
+                    validated = TrainingRelevanceAIExplanation(explanation=str(data.get("explanation") or ""))
+                    if not validated.explanation.strip():
+                        continue
+
+                    return validated, None
+
+                except ValidationError as e:
+                    logger.warning(f"Training relevance explanation validation failed on model {model}: {e}")
+                    last_error = "AI response validation failed."
+                except Exception as e:
+                    logger.error(f"Groq relevance explanation error on model {model} attempt {attempt + 1}: {type(e).__name__}: {e}")
+                    last_error = f"AI service error: {type(e).__name__}"
+                    break
+
+        return None, last_error or "AI failed to explain training relevance after multiple attempts."
 
 
 groq_client = GroqAIClient()

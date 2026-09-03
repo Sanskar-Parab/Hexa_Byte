@@ -14,6 +14,7 @@ import {
   FileText,
   ClipboardCheck,
   Rocket,
+  Award,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
@@ -27,6 +28,7 @@ const links = [
   { href: "/roadmap", label: "Roadmap", icon: Map },
   { href: "/projects", label: "Projects", icon: FolderKanban },
   { href: "/opportunities", label: "Jobs & Internships", icon: Rocket },
+  { href: "/outcomes", label: "Career Outcomes", icon: Award },
   { href: "/resume", label: "Resume", icon: FileText },
   { href: "/job-analyzer", label: "Job Match", icon: ClipboardCheck },
   { href: "/coach", label: "AI Coach", icon: MessageSquare },

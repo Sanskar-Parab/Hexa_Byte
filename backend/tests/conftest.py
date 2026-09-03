@@ -17,3 +17,10 @@ import app.services.resume_service
 import app.services.job_analysis_service
 import app.services.coach_service
 import app.services.adaptive_events
+import app.models.outcome
+import app.services.outcome_service
+import app.services.training_intelligence
+import app.services.outcome_timeline
+import app.services.outcome_ai_analysis
+import app.services.admin_analytics
+import app.services.demo_outcome_seed
