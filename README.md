@@ -554,6 +554,7 @@ An `is_admin` account is routed to `/admin/outcomes`; a regular student account 
 - Parth Naik
 - Shravani Thorave
 - Parth Gaikwad
+- Shravani Mali
 ---
 
 ## License
