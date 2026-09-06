@@ -548,6 +548,12 @@ An `is_admin` account is routed to `/admin/outcomes`; a regular student account 
 
 ---
 
+## 👥 Team Members
+
+- Sanskar Parab —
+
+---
+
 ## License
 
 This project is for educational and demonstration purposes.
