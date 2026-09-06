@@ -550,9 +550,10 @@ An `is_admin` account is routed to `/admin/outcomes`; a regular student account 
 
 ## 👥 Team Members
 
-- Sanskar Parab —
+- Sanskar Parab 
+- Parth Naik
+- Shravani Thorave
 - Vaishnavi Waghmare
-
 ---
 
 ## License
