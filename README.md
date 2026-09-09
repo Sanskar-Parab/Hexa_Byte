@@ -9,6 +9,7 @@ Next Path AI is an AI-powered career guidance platform that analyzes your skills
 ## Features
 
 ### Core Features
+
 - **User Authentication** — Register, login, and secure JWT-based sessions (7-day expiry)
 - **Multi-Step Onboarding** — 4-step profile setup: Basic Info, Experience, Interests, Skills
 - **Career Fit Assessment** — 20-question assessment measuring 8 cognitive dimensions
@@ -20,17 +21,20 @@ Next Path AI is an AI-powered career guidance platform that analyzes your skills
 - **Demo Mode** — Pre-loaded sample data (Aarav Sharma) for instant testing
 
 ### Skill Management
+
 - **Skill Evidence System** — Multi-source evidence tracking (assessment, project, resume, job, manual) with confidence levels (LOW/MEDIUM/HIGH)
 - **AI Skill Assessment** — 10-question MCQ assessment powered by Groq API with proficiency scoring and analysis
 - **Confidence Auto-Recomputation** — Skill confidence recalculated automatically when evidence changes
 
 ### Resume & Job Analysis
+
 - **Resume Upload & Parsing** — PDF upload with automatic section extraction (skills, experience, education, projects)
 - **Skill Extraction** — Cross-references resume content against skill database with evidence creation
 - **Job Description Analysis** — Paste job descriptions to analyze skill match and alignment percentage
 - **Skill Matching** — Fuzzy/partial matching (React.js matches React) with strong/developing/missing breakdowns
 
 ### Jobs & Internships (AI-Personalized Recommendations)
+
 - **Live Provider Data** — Real jobs and internships fetched from JSearch (by OpenWeb Ninja, via RapidAPI), never a local/fake dataset
 - **India-First** — Every search is scoped server-side to India (`country=in`); recommendations are India-only by default, no manual filter needed
 - **One Provider Abstraction** — `opportunity_provider.py` is the only module that talks to RapidAPI; the matching/recommendation layer is provider-agnostic, so swapping providers later doesn't touch the matching engine
@@ -44,12 +48,14 @@ Next Path AI is an AI-powered career guidance platform that analyzes your skills
 - **Graceful Degradation** — RapidAPI outages/rate limits/quota exhaustion never crash the app; if a query fails but a fallback query still returns data, that data is still shown
 
 ### Adaptive Systems
+
 - **Adaptive Roadmaps** — Phases auto-adapt based on proficiency (skip adapted phases, reduce duration for known skills)
 - **Adaptive Event System** — Cascading updates triggered by skill assessments, project completions, resume/job analyses
 - **Next Best Action** — AI-powered prioritization of 10 action types by career impact, including 3 outcome-aware types triggered by placement/employment state
 - **Skill-Aware Projects** — Composite scoring combining career relevance, gap relevance, roadmap relevance, and difficulty fit
 
 ### AI Integration
+
 - **Multi-Model AI** — Groq-powered assessment, project generation, and career coaching with model fallback and rate limit handling
 - **Deterministic Fallbacks** — Every AI feature has a non-AI fallback for reliability
 - **AI Project Generation** — Generate custom project recommendations based on skill levels, gaps, and roadmap phase
@@ -57,7 +63,9 @@ Next Path AI is an AI-powered career guidance platform that analyzes your skills
 - **Security Hardening** — Prompt injection protection, evidence source transparency (assessed vs. self-reported vs. project-backed), and strict context-only data usage
 
 ### Employment Outcome Tracking (Career Outcomes)
+
 Built for the Maharashtra Government "Smart Education" problem statement — tracking employment outcomes, skill gaps, and skilling-initiative impact across training providers, not just individual career guidance.
+
 - **Consent-Gated Reporting** — Students opt in before any outcome data is recorded; consent can be revoked at any time, and revocation is honored everywhere outcome data is read or aggregated
 - **Training Enrollment & Placement** — Students self-report training program enrollment, placement/employment status (placed, employed, self-employed, looking for work, not employed), job title, company, location, and salary — all optional beyond status
 - **Longitudinal Check-Ins** — Periodic check-ins track continued employment, salary progression, and reasons for leaving (never required, since the honest case is "still employed")
@@ -68,7 +76,9 @@ Built for the Maharashtra Government "Smart Education" problem statement — tra
 - **Outcome-Aware Next Best Action** — 3 additional action types (`IMPROVE_SKILL_FOR_PLACEMENT`, `APPLY_OPPORTUNITIES`, `EXPLORE_RELEVANT_OPPORTUNITIES`) triggered by a student's placement/employment state, alongside the original 7
 
 ### Government Admin Dashboard (Privacy-Preserving Analytics)
+
 A separate `is_admin`-gated area for tracking skilling-initiative impact in aggregate, without exposing any individual's data.
+
 - **Cohort-Level Aggregation Only** — Every metric is computed over a cohort; any cohort smaller than `MIN_COHORT_SIZE` (5) is suppressed rather than shown, so a small group can never be re-identified
 - **Overview, Provider, Program & Retention Views** — Placement rate, average salary, retention curves, and provider/program comparison, each filterable by date range, provider, and program
 - **Skill Gap & Non-Placement Analysis** — Aggregate view of the most common missing skills and reasons students remain unplaced
@@ -81,29 +91,29 @@ A separate `is_admin`-gated area for tracking skilling-initiative impact in aggr
 
 ### Frontend
 
-| Technology | Purpose |
-|------------|---------|
-| Next.js 14 (App Router) | React framework with SSR/SSG |
-| TypeScript 5 | Type safety |
-| Tailwind CSS 3.4 | Utility-first styling |
-| Radix UI + shadcn/ui | Accessible UI components (Dialog, Select, Slider, Tabs, Progress, Avatar) |
-| Recharts | Data visualization (progress charts) |
-| Lucide React | Icons |
-| date-fns | Date utilities |
+| Technology              | Purpose                                                                   |
+| ----------------------- | ------------------------------------------------------------------------- |
+| Next.js 14 (App Router) | React framework with SSR/SSG                                              |
+| TypeScript 5            | Type safety                                                               |
+| Tailwind CSS 3.4        | Utility-first styling                                                     |
+| Radix UI + shadcn/ui    | Accessible UI components (Dialog, Select, Slider, Tabs, Progress, Avatar) |
+| Recharts                | Data visualization (progress charts)                                      |
+| Lucide React            | Icons                                                                     |
+| date-fns                | Date utilities                                                            |
 
 ### Backend
 
-| Technology | Purpose |
-|------------|---------|
-| FastAPI | Python async web framework |
-| SQLAlchemy 2.0 | ORM and database management |
-| SQLite / PostgreSQL | Database (SQLite for dev, PostgreSQL for prod) |
-| Pydantic 2.5 | Data validation schemas |
-| Groq API | AI skill assessment, project generation, career coaching with model fallback |
-| PyPDF2 | Resume PDF text extraction |
-| JWT + bcrypt | Authentication and security |
-| Alembic | Database migrations |
-| pandas | Data manipulation |
+| Technology          | Purpose                                                                      |
+| ------------------- | ---------------------------------------------------------------------------- |
+| FastAPI             | Python async web framework                                                   |
+| SQLAlchemy 2.0      | ORM and database management                                                  |
+| SQLite / PostgreSQL | Database (SQLite for dev, PostgreSQL for prod)                               |
+| Pydantic 2.5        | Data validation schemas                                                      |
+| Groq API            | AI skill assessment, project generation, career coaching with model fallback |
+| PyPDF2              | Resume PDF text extraction                                                   |
+| JWT + bcrypt        | Authentication and security                                                  |
+| Alembic             | Database migrations                                                          |
+| pandas              | Data manipulation                                                            |
 
 ---
 
@@ -260,166 +270,187 @@ CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001
 ## API Endpoints
 
 ### Authentication
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/auth/register` | Register new user |
-| POST | `/api/auth/login` | Login and receive JWT |
-| POST | `/api/auth/logout` | Logout |
-| GET | `/api/auth/me` | Get current user |
+
+| Method | Endpoint             | Description           |
+| ------ | -------------------- | --------------------- |
+| POST   | `/api/auth/register` | Register new user     |
+| POST   | `/api/auth/login`    | Login and receive JWT |
+| POST   | `/api/auth/logout`   | Logout                |
+| GET    | `/api/auth/me`       | Get current user      |
 
 ### Profile
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET/POST | `/api/profile` | Get or update profile |
-| POST | `/api/profile/onboarding` | Complete multi-step onboarding |
+
+| Method   | Endpoint                  | Description                    |
+| -------- | ------------------------- | ------------------------------ |
+| GET/POST | `/api/profile`            | Get or update profile          |
+| POST     | `/api/profile/onboarding` | Complete multi-step onboarding |
 
 ### Skills
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/skills` | List all available skills |
-| GET | `/api/skills/user` | List user's skills with proficiency & confidence |
-| POST | `/api/skills` | Add a skill to user profile |
-| PUT | `/api/skills/{skill_id}` | Update skill proficiency |
-| DELETE | `/api/skills/{skill_id}` | Remove a skill |
+
+| Method | Endpoint                 | Description                                      |
+| ------ | ------------------------ | ------------------------------------------------ |
+| GET    | `/api/skills`            | List all available skills                        |
+| GET    | `/api/skills/user`       | List user's skills with proficiency & confidence |
+| POST   | `/api/skills`            | Add a skill to user profile                      |
+| PUT    | `/api/skills/{skill_id}` | Update skill proficiency                         |
+| DELETE | `/api/skills/{skill_id}` | Remove a skill                                   |
 
 ### Interests
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/interests` | List all interests |
-| GET | `/api/interests/user` | List user's interests |
-| POST | `/api/interests/{interest_id}` | Add interest |
-| DELETE | `/api/interests/{interest_id}` | Remove interest |
+
+| Method | Endpoint                       | Description           |
+| ------ | ------------------------------ | --------------------- |
+| GET    | `/api/interests`               | List all interests    |
+| GET    | `/api/interests/user`          | List user's interests |
+| POST   | `/api/interests/{interest_id}` | Add interest          |
+| DELETE | `/api/interests/{interest_id}` | Remove interest       |
 
 ### Assessment
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/assessment/questions` | Get 20 assessment questions |
-| POST | `/api/assessment/submit` | Submit answers, get 8-dimension scores |
-| GET | `/api/assessment/result` | Get latest assessment result |
+
+| Method | Endpoint                    | Description                            |
+| ------ | --------------------------- | -------------------------------------- |
+| GET    | `/api/assessment/questions` | Get 20 assessment questions            |
+| POST   | `/api/assessment/submit`    | Submit answers, get 8-dimension scores |
+| GET    | `/api/assessment/result`    | Get latest assessment result           |
 
 ### Career Recommendations
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/careers` | List all career paths |
-| GET | `/api/careers/{id}` | Get career detail |
-| POST | `/api/careers/recommend` | Get personalized career recommendations |
-| GET | `/api/careers/recommendations` | Get stored recommendations |
-| GET | `/api/careers/{id}/intelligence` | Get full career intelligence |
+
+| Method | Endpoint                         | Description                             |
+| ------ | -------------------------------- | --------------------------------------- |
+| GET    | `/api/careers`                   | List all career paths                   |
+| GET    | `/api/careers/{id}`              | Get career detail                       |
+| POST   | `/api/careers/recommend`         | Get personalized career recommendations |
+| GET    | `/api/careers/recommendations`   | Get stored recommendations              |
+| GET    | `/api/careers/{id}/intelligence` | Get full career intelligence            |
 
 ### Skill Gap Analysis
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/skill-gap/analyze` | Analyze skill gaps for a career |
+
+| Method | Endpoint                 | Description                     |
+| ------ | ------------------------ | ------------------------------- |
+| POST   | `/api/skill-gap/analyze` | Analyze skill gaps for a career |
 
 ### Roadmap
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/roadmap/generate` | Generate personalized learning roadmap |
-| GET | `/api/roadmap` | Get current roadmap |
-| PUT | `/api/roadmap/phase/{phase_id}/status` | Update phase status |
+
+| Method | Endpoint                               | Description                            |
+| ------ | -------------------------------------- | -------------------------------------- |
+| POST   | `/api/roadmap/generate`                | Generate personalized learning roadmap |
+| GET    | `/api/roadmap`                         | Get current roadmap                    |
+| PUT    | `/api/roadmap/phase/{phase_id}/status` | Update phase status                    |
 
 ### Projects
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/projects/recommendations` | Get skill-aware project recommendations |
-| GET | `/api/projects/user-difficulty` | Get user difficulty level |
-| PUT | `/api/projects/preferred-difficulty` | Set preferred difficulty |
-| GET | `/api/projects/stats` | Get project stats |
-| GET | `/api/projects/ai-generated` | List AI-generated projects |
-| GET | `/api/projects/{id}` | Get project detail |
-| POST | `/api/projects/generate-ai` | Generate AI project recommendations |
-| POST | `/api/projects/{id}/status` | Update project status |
+
+| Method | Endpoint                             | Description                             |
+| ------ | ------------------------------------ | --------------------------------------- |
+| GET    | `/api/projects/recommendations`      | Get skill-aware project recommendations |
+| GET    | `/api/projects/user-difficulty`      | Get user difficulty level               |
+| PUT    | `/api/projects/preferred-difficulty` | Set preferred difficulty                |
+| GET    | `/api/projects/stats`                | Get project stats                       |
+| GET    | `/api/projects/ai-generated`         | List AI-generated projects              |
+| GET    | `/api/projects/{id}`                 | Get project detail                      |
+| POST   | `/api/projects/generate-ai`          | Generate AI project recommendations     |
+| POST   | `/api/projects/{id}/status`          | Update project status                   |
 
 ### Progress
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/progress/dashboard` | Get progress dashboard data |
-| POST | `/api/progress/update` | Update progress for an item |
+
+| Method | Endpoint                  | Description                 |
+| ------ | ------------------------- | --------------------------- |
+| GET    | `/api/progress/dashboard` | Get progress dashboard data |
+| POST   | `/api/progress/update`    | Update progress for an item |
 
 ### AI Coach
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/coach/ask` | Ask AI career coach (accepts optional `conversation` history for follow-ups) |
-| GET | `/api/coach/context` | Get coach context summary |
+
+| Method | Endpoint             | Description                                                                  |
+| ------ | -------------------- | ---------------------------------------------------------------------------- |
+| POST   | `/api/coach/ask`     | Ask AI career coach (accepts optional `conversation` history for follow-ups) |
+| GET    | `/api/coach/context` | Get coach context summary                                                    |
 
 ### Skill Assessment (AI)
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/skill-assessment/ai-status` | Check AI availability |
-| POST | `/api/skill-assessment/start` | Start AI skill assessment |
-| POST | `/api/skill-assessment/submit` | Submit assessment answers |
+
+| Method | Endpoint                          | Description               |
+| ------ | --------------------------------- | ------------------------- |
+| GET    | `/api/skill-assessment/ai-status` | Check AI availability     |
+| POST   | `/api/skill-assessment/start`     | Start AI skill assessment |
+| POST   | `/api/skill-assessment/submit`    | Submit assessment answers |
 
 ### Evidence
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/evidence` | List all evidence grouped by skill |
-| GET | `/api/evidence/skill/{skill_id}` | Get evidence for a skill |
+
+| Method | Endpoint                         | Description                        |
+| ------ | -------------------------------- | ---------------------------------- |
+| GET    | `/api/evidence`                  | List all evidence grouped by skill |
+| GET    | `/api/evidence/skill/{skill_id}` | Get evidence for a skill           |
 
 ### Next Best Action
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/next-best-action` | Get highest-priority next action |
+
+| Method | Endpoint                | Description                      |
+| ------ | ----------------------- | -------------------------------- |
+| POST   | `/api/next-best-action` | Get highest-priority next action |
 
 ### Resume
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/resume/upload` | Upload and parse PDF resume |
-| GET | `/api/resume` | List uploaded resumes |
-| GET | `/api/resume/{id}` | Get resume detail |
-| DELETE | `/api/resume/{id}` | Delete resume |
+
+| Method | Endpoint             | Description                 |
+| ------ | -------------------- | --------------------------- |
+| POST   | `/api/resume/upload` | Upload and parse PDF resume |
+| GET    | `/api/resume`        | List uploaded resumes       |
+| GET    | `/api/resume/{id}`   | Get resume detail           |
+| DELETE | `/api/resume/{id}`   | Delete resume               |
 
 ### Job Analysis
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/job/analyze` | Analyze job description |
-| GET | `/api/job/history` | List past job analyses |
-| GET | `/api/job/{id}` | Get specific analysis |
-| DELETE | `/api/job/{id}` | Delete analysis |
+
+| Method | Endpoint           | Description             |
+| ------ | ------------------ | ----------------------- |
+| POST   | `/api/job/analyze` | Analyze job description |
+| GET    | `/api/job/history` | List past job analyses  |
+| GET    | `/api/job/{id}`    | Get specific analysis   |
+| DELETE | `/api/job/{id}`    | Delete analysis         |
 
 ### Jobs & Internships (Opportunities)
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/opportunities/recommendations` | Personalized job/internship recommendations from live provider data. Query params: `type` (`all`\|`internship`\|`job`), `limit`, `min_match`, `career_id`. User identity always comes from the JWT, never a query param. |
+
+| Method | Endpoint                             | Description                                                                                                                                                                                                              |
+| ------ | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| GET    | `/api/opportunities/recommendations` | Personalized job/internship recommendations from live provider data. Query params: `type` (`all`\|`internship`\|`job`), `limit`, `min_match`, `career_id`. User identity always comes from the JWT, never a query param. |
 
 ### Demo
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/demo/load` | Load demo data |
+
+| Method | Endpoint         | Description    |
+| ------ | ---------------- | -------------- |
+| POST   | `/api/demo/load` | Load demo data |
 
 ### Career Outcomes (student-facing, consent-gated)
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET/POST | `/api/outcomes/consent` | Get or set outcome-tracking consent (required before any outcome write) |
-| GET | `/api/outcomes/training` | List training programs |
-| POST | `/api/outcomes/training` | Create a training program (provider-side) |
-| GET/POST | `/api/outcomes/enrollment` | List the user's enrollments / enroll in a training program |
-| GET/POST | `/api/outcomes/employment` | List the user's employment outcomes / report placement or employment |
-| GET/POST | `/api/outcomes/check-in` and `/api/outcomes/check-ins` | Submit a longitudinal check-in / list check-in history |
-| GET | `/api/outcomes/timeline` | Full timeline: training, placement, salary progression, check-ins, summary |
-| GET | `/api/outcomes/{training_program_id}/skill-match` | Deterministic training-to-skill match detail |
-| GET | `/api/outcomes/{training_program_id}/relevance` | Deterministic training-to-job relevance score + label |
-| GET | `/api/outcomes/readiness` | Placement readiness score |
-| GET | `/api/outcomes/opportunities` | Opportunities relevant to the user's training |
-| GET | `/api/outcomes/analysis/non-placement` | AI-assisted (advisory only) reason analysis for non-placement |
-| GET | `/api/outcomes/analysis/attrition` | AI-assisted (advisory only) attrition risk analysis |
-| GET | `/api/outcomes/analysis/relevance-explanation` | AI-assisted (advisory only) plain-language relevance explanation |
+
+| Method   | Endpoint                                               | Description                                                                |
+| -------- | ------------------------------------------------------ | -------------------------------------------------------------------------- |
+| GET/POST | `/api/outcomes/consent`                                | Get or set outcome-tracking consent (required before any outcome write)    |
+| GET      | `/api/outcomes/training`                               | List training programs                                                     |
+| POST     | `/api/outcomes/training`                               | Create a training program (provider-side)                                  |
+| GET/POST | `/api/outcomes/enrollment`                             | List the user's enrollments / enroll in a training program                 |
+| GET/POST | `/api/outcomes/employment`                             | List the user's employment outcomes / report placement or employment       |
+| GET/POST | `/api/outcomes/check-in` and `/api/outcomes/check-ins` | Submit a longitudinal check-in / list check-in history                     |
+| GET      | `/api/outcomes/timeline`                               | Full timeline: training, placement, salary progression, check-ins, summary |
+| GET      | `/api/outcomes/{training_program_id}/skill-match`      | Deterministic training-to-skill match detail                               |
+| GET      | `/api/outcomes/{training_program_id}/relevance`        | Deterministic training-to-job relevance score + label                      |
+| GET      | `/api/outcomes/readiness`                              | Placement readiness score                                                  |
+| GET      | `/api/outcomes/opportunities`                          | Opportunities relevant to the user's training                              |
+| GET      | `/api/outcomes/analysis/non-placement`                 | AI-assisted (advisory only) reason analysis for non-placement              |
+| GET      | `/api/outcomes/analysis/attrition`                     | AI-assisted (advisory only) attrition risk analysis                        |
+| GET      | `/api/outcomes/analysis/relevance-explanation`         | AI-assisted (advisory only) plain-language relevance explanation           |
 
 ### Admin Analytics (government dashboard, `is_admin`-gated)
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/admin/outcomes/overview` | Cohort-level placement/salary/retention metrics (suppressed below `MIN_COHORT_SIZE`) |
-| GET | `/api/admin/outcomes/providers` | Provider comparison |
-| GET | `/api/admin/outcomes/programs` | Program-level analytics |
-| GET | `/api/admin/outcomes/skill-gaps` | Aggregate skill gap analysis |
-| GET | `/api/admin/outcomes/non-placement` | Aggregate non-placement reason breakdown |
-| GET | `/api/admin/outcomes/curriculum-recommendations` | Curriculum suggestions from recurring skill gaps (≥30% of cohort) |
-| GET | `/api/admin/outcomes/filters` | Available filter options (providers, programs, date ranges) |
-| POST | `/api/admin/outcomes/demo-data` | Seed idempotent, clearly-labeled demo outcome data |
+
+| Method | Endpoint                                         | Description                                                                          |
+| ------ | ------------------------------------------------ | ------------------------------------------------------------------------------------ |
+| GET    | `/api/admin/outcomes/overview`                   | Cohort-level placement/salary/retention metrics (suppressed below `MIN_COHORT_SIZE`) |
+| GET    | `/api/admin/outcomes/providers`                  | Provider comparison                                                                  |
+| GET    | `/api/admin/outcomes/programs`                   | Program-level analytics                                                              |
+| GET    | `/api/admin/outcomes/skill-gaps`                 | Aggregate skill gap analysis                                                         |
+| GET    | `/api/admin/outcomes/non-placement`              | Aggregate non-placement reason breakdown                                             |
+| GET    | `/api/admin/outcomes/curriculum-recommendations` | Curriculum suggestions from recurring skill gaps (≥30% of cohort)                    |
+| GET    | `/api/admin/outcomes/filters`                    | Available filter options (providers, programs, date ranges)                          |
+| POST   | `/api/admin/outcomes/demo-data`                  | Seed idempotent, clearly-labeled demo outcome data                                   |
 
 ### System
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/health` | Health check |
+
+| Method | Endpoint  | Description  |
+| ------ | --------- | ------------ |
+| GET    | `/health` | Health check |
 
 ---
 
@@ -519,10 +550,10 @@ Every number a government administrator sees on `/admin/outcomes` is an aggregat
 
 ## Demo & Admin Access
 
-| Role | How to access | Credentials |
-|------|----------------|-------------|
-| Student (demo) | `POST /api/demo/load` (also wired to a "Try Demo" button on the frontend) loads a fully pre-filled profile (Aarav Sharma) and returns a JWT | — |
-| Government admin | Log in at `/login` | `admin@nextpath.gov` / `Admin@12345` (demo credentials — rotate before any real deployment) |
+| Role             | How to access                                                                                                                               | Credentials                                                                                 |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Student (demo)   | `POST /api/demo/load` (also wired to a "Try Demo" button on the frontend) loads a fully pre-filled profile (Aarav Sharma) and returns a JWT | —                                                                                           |
+| Government admin | Log in at `/login`                                                                                                                          | `admin@nextpath.gov` / `Admin@12345` (demo credentials — rotate before any real deployment) |
 
 An `is_admin` account is routed to `/admin/outcomes`; a regular student account is routed to `/dashboard`. The two views share no data path — the admin dashboard only ever reads aggregated cohort metrics, never a specific student's record.
 
@@ -532,19 +563,30 @@ An `is_admin` account is routed to `/admin/outcomes`; a regular student account 
 
 ### Frontend
 
-| Script | Command | Description |
-|--------|---------|-------------|
-| `npm run dev` | `next dev` | Start development server |
-| `npm run build` | `next build` | Build for production |
-| `npm run start` | `next start` | Start production server |
-| `npm run lint` | `next lint` | Run ESLint |
+| Script          | Command      | Description              |
+| --------------- | ------------ | ------------------------ |
+| `npm run dev`   | `next dev`   | Start development server |
+| `npm run build` | `next build` | Build for production     |
+| `npm run start` | `next start` | Start production server  |
+| `npm run lint`  | `next lint`  | Run ESLint               |
 
 ### Backend
 
-| Command | Description |
-|---------|-------------|
+| Command                         | Description                       |
+| ------------------------------- | --------------------------------- |
 | `uvicorn app.main:app --reload` | Start dev server with auto-reload |
-| `pytest` | Run tests (612+ tests) |
+| `pytest`                        | Run tests (612+ tests)            |
+
+---
+
+## 👥 Team Members
+
+- Sanskar Parab
+- Parth Naik
+- Shravani Thorave
+- Vaishnavi Waghmare
+- Parth Gaikwad
+- Shravani Mali
 
 ---
 
