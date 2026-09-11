@@ -107,6 +107,7 @@ class EmploymentOutcome(Base):
 
     source = Column(String, nullable=True)  # self_reported, training_provider, verified_employer
     verified = Column(Boolean, nullable=False, default=False)
+    evidence_level = Column(String, nullable=False, default="self_reported")  # self_reported, evidence_submitted, verified
 
     # Links this outcome back to a specific opportunity the student was once
     # recommended (from the live JSearch-backed recommendation pipeline in

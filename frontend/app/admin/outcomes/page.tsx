@@ -18,6 +18,7 @@ import { ProviderTable } from "@/components/admin/ProviderTable";
 import { ProgramTable } from "@/components/admin/ProgramTable";
 import { CurriculumRecommendations } from "@/components/admin/CurriculumRecommendations";
 import { DemoDatasetBanner } from "@/components/admin/DemoDatasetBanner";
+import { VerificationQueue } from "@/components/admin/VerificationQueue";
 import { formatCurrency } from "@/lib/utils";
 import { api } from "@/lib/api";
 import type {
@@ -184,6 +185,10 @@ export default function AdminOutcomesPage() {
 
           <Section title="Program Impact">
             <ProgramTable programs={programs} />
+          </Section>
+
+          <Section title="Employer Verification">
+            <VerificationQueue />
           </Section>
         </>
       )}

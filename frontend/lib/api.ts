@@ -345,6 +345,27 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+  submitOutcomeEvidence: (outcomeId: string) =>
+    fetcher<import("@/types").EmploymentOutcome>(`/outcomes/employment/${outcomeId}/evidence`, {
+      method: "PATCH",
+    }),
+
+  // --- Admin verification (admin-only) -----------------------------------
+
+  getAdminEmploymentOutcomes: (params?: { limit?: number; offset?: number; employment_status?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.limit) q.set("limit", String(params.limit));
+    if (params?.offset) q.set("offset", String(params.offset));
+    if (params?.employment_status) q.set("employment_status", params.employment_status);
+    const qs = q.toString();
+    return fetcher<import("@/types").EmploymentOutcome[]>(`/admin/outcomes/employment${qs ? `?${qs}` : ""}`);
+  },
+
+  verifyOutcome: (outcomeId: string) =>
+    fetcher<import("@/types").EmploymentOutcome>(`/admin/outcomes/${outcomeId}/verify`, {
+      method: "PATCH",
+    }),
+
   // --- Admin/government skilling-impact analytics (admin-only) -----------
 
   getAdminOverview: (filters?: import("@/types").AdminAnalyticsFilters) =>

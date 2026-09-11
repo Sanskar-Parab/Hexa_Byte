@@ -177,6 +177,8 @@ def update_enrollment(db: Session, enrollment: TrainingEnrollment, data) -> Trai
 # ---------------------------------------------------------------------------
 
 def create_employment_outcome(db: Session, user_id: UUID, data) -> EmploymentOutcome:
+    # SECURITY: never trust client-provided verified/evidence_level/source for self-reported creation
+    # Always default to self_reported + unverified. Admin verification is via verify_employment_outcome().
     outcome = EmploymentOutcome(
         user_id=user_id,
         training_enrollment_id=data.training_enrollment_id,
@@ -193,10 +195,11 @@ def create_employment_outcome(db: Session, user_id: UUID, data) -> EmploymentOut
         salary=data.salary,
         salary_currency=data.salary_currency,
         salary_period=data.salary_period,
-        source=data.source,
+        source="self_reported",
         source_opportunity_id=data.source_opportunity_id,
         source_opportunity_title=data.source_opportunity_title,
         verified=False,
+        evidence_level="self_reported",
     )
     db.add(outcome)
     db.commit()
@@ -216,6 +219,36 @@ def get_employment_outcome(db: Session, user_id: UUID, outcome_id: UUID) -> Empl
         EmploymentOutcome.id == outcome_id,
         EmploymentOutcome.user_id == user_id,
     ).first()
+
+
+def get_employment_outcome_by_id(db: Session, outcome_id: UUID) -> EmploymentOutcome | None:
+    """Admin helper: fetch any outcome by id, not user-scoped."""
+    return db.query(EmploymentOutcome).filter(EmploymentOutcome.id == outcome_id).first()
+
+
+def list_all_employment_outcomes(db: Session, limit: int = 100, offset: int = 0) -> list[EmploymentOutcome]:
+    """Admin helper: list all employment outcomes (paginated)."""
+    return db.query(EmploymentOutcome).order_by(EmploymentOutcome.created_at.desc()).offset(offset).limit(limit).all()
+
+
+def verify_employment_outcome(db: Session, outcome: EmploymentOutcome) -> EmploymentOutcome:
+    """Mark an outcome as employer-verified (admin-only). Idempotent."""
+    outcome.verified = True
+    outcome.source = "verified_employer"
+    outcome.evidence_level = "verified"
+    db.commit()
+    db.refresh(outcome)
+    return outcome
+
+
+def submit_evidence_for_outcome(db: Session, outcome: EmploymentOutcome) -> EmploymentOutcome:
+    """Student submits evidence for self-employment (MVP: just flips level to evidence_submitted)."""
+    if outcome.evidence_level == "verified" or outcome.verified:
+        return outcome
+    outcome.evidence_level = "evidence_submitted"
+    db.commit()
+    db.refresh(outcome)
+    return outcome
 
 
 # ---------------------------------------------------------------------------

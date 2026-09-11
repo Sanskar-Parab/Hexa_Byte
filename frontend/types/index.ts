@@ -501,6 +501,8 @@ export interface OutcomePlacementBlock {
   source_opportunity_id: string | null;
   source_opportunity_title: string | null;
   verified: boolean;
+  source?: string | null;
+  evidence_level?: EvidenceLevel | string | null;
 }
 
 export interface OutcomeEmploymentBlock {
@@ -697,6 +699,8 @@ export interface TrainingEnrollment {
   updated_at: string;
 }
 
+export type EvidenceLevel = "self_reported" | "evidence_submitted" | "verified";
+
 export interface EmploymentOutcome {
   id: string;
   user_id: string;
@@ -716,6 +720,7 @@ export interface EmploymentOutcome {
   salary_period: string | null;
   source: string | null;
   verified: boolean;
+  evidence_level?: EvidenceLevel | string | null;
   created_at: string;
   updated_at: string;
 }

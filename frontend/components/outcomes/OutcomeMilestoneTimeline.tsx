@@ -58,6 +58,13 @@ interface NodeDef {
   body?: React.ReactNode;
 }
 
+function evidenceLabel(level?: string | null, verified?: boolean): string {
+  const lvl = (level || (verified ? "verified" : "self_reported")).toLowerCase();
+  if (lvl === "verified") return "✓ Verified";
+  if (lvl === "evidence_submitted") return "Evidence submitted";
+  return "Self-reported";
+}
+
 export function OutcomeMilestoneTimeline({ timeline }: { timeline: OutcomeTimeline }) {
   const { training, placement, employment, milestones, retention, training_relevance_over_time } = timeline;
 
@@ -86,7 +93,7 @@ export function OutcomeMilestoneTimeline({ timeline }: { timeline: OutcomeTimeli
           {placement.source_opportunity_title && (
             <p className="text-sm text-body">Recommended opportunity: {placement.source_opportunity_title}</p>
           )}
-          <p className="text-xs text-mute">{placement.verified ? "Verified" : "Self-reported"}</p>
+          <p className="text-xs text-mute">{evidenceLabel((placement as any).evidence_level, placement.verified)}</p>
         </div>
       ) : (
         <p className="text-sm text-mute">Not placed yet.</p>

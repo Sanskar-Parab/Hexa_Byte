@@ -10,6 +10,7 @@ EmploymentStatus = Literal["not_employed", "placed", "employed", "self_employed"
 EmploymentType = Literal["full_time", "part_time", "contract", "internship", "freelance"]
 SalaryPeriod = Literal["hourly", "monthly", "annual"]
 OutcomeSource = Literal["self_reported", "training_provider", "verified_employer"]
+EvidenceLevel = Literal["self_reported", "evidence_submitted", "verified"]
 TrainingRelevance = Literal["high", "medium", "low", "unknown"]
 OutreachResult = Literal["responded", "attempted_no_response", "not_attempted"]
 
@@ -120,6 +121,9 @@ class EmploymentOutcomeCreate(BaseModel):
     source: OutcomeSource = "self_reported"
     source_opportunity_id: Optional[str] = None
     source_opportunity_title: Optional[str] = None
+    # Additive: accepted but ignored for non-admin creation; server forces self_reported
+    evidence_level: Optional[EvidenceLevel] = None
+    verified: Optional[bool] = None
 
     @model_validator(mode="after")
     def check_dates(self):
@@ -169,11 +173,37 @@ class EmploymentOutcomeResponse(BaseModel):
     source_opportunity_id: Optional[str] = None
     source_opportunity_title: Optional[str] = None
     verified: bool
+    evidence_level: str = "self_reported"
     created_at: datetime
     updated_at: datetime
 
     class Config:
         from_attributes = True
+
+    @model_validator(mode="before")
+    @classmethod
+    def coerce_evidence_level(cls, data):
+        # Backward compat: old rows / old mocks may have no evidence_level or a non-string (e.g. MagicMock)
+        allowed = {"self_reported", "evidence_submitted", "verified"}
+        if isinstance(data, dict):
+            lvl = data.get("evidence_level")
+            if not isinstance(lvl, str) or lvl not in allowed:
+                if data.get("verified") is True:
+                    data["evidence_level"] = "verified"
+                else:
+                    data["evidence_level"] = "self_reported"
+        else:
+            lvl = getattr(data, "evidence_level", None)
+            # Treat MagicMock / non-string as missing
+            if not isinstance(lvl, str) or lvl not in allowed:
+                verified = getattr(data, "verified", False)
+                # verified may be MagicMock; only treat exact True as verified
+                is_verified = verified is True
+                try:
+                    setattr(data, "evidence_level", "verified" if is_verified else "self_reported")
+                except Exception:
+                    pass
+        return data
 
 
 # ---------------------------------------------------------------------------

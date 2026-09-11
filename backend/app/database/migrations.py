@@ -57,6 +57,11 @@ def run_migrations():
             conn.execute(text("ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT 0"))
         if not _column_exists(conn, "outcome_check_ins", "outreach_result"):
             conn.execute(text("ALTER TABLE outcome_check_ins ADD COLUMN outreach_result VARCHAR"))
+        if not _column_exists(conn, "employment_outcomes", "evidence_level"):
+            conn.execute(text("ALTER TABLE employment_outcomes ADD COLUMN evidence_level VARCHAR DEFAULT 'self_reported'"))
+            # Backfill: existing verified rows become 'verified', others stay self_reported
+            conn.execute(text("UPDATE employment_outcomes SET evidence_level='verified' WHERE verified=1 AND (evidence_level IS NULL OR evidence_level='self_reported')"))
+            conn.execute(text("UPDATE employment_outcomes SET evidence_level='self_reported' WHERE evidence_level IS NULL"))
 
     # Create new tables for Phase 6
     Resume.__table__.create(bind=engine, checkfirst=True)

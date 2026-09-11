@@ -6,6 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { OutcomeTimeline } from "@/types";
 
+function evidenceLabel(level?: string | null, verified?: boolean): string {
+  const lvl = (level || (verified ? "verified" : "self_reported")).toLowerCase();
+  if (lvl === "verified") return "✓ Verified";
+  if (lvl === "evidence_submitted") return "Evidence submitted";
+  return "Self-reported";
+}
+
 function StatCard({
   icon: Icon,
   label,
@@ -61,9 +68,9 @@ export function OutcomeSummaryCards({ timeline }: { timeline: OutcomeTimeline })
         }
         meta={
           placement?.source_opportunity_title
-            ? `Via recommendation: ${placement.source_opportunity_title}`
+            ? `Via recommendation: ${placement.source_opportunity_title} · ${evidenceLabel((placement as any).evidence_level, placement.verified)}`
             : placement
-              ? placement.verified ? "Verified" : "Self-reported"
+              ? evidenceLabel((placement as any).evidence_level, placement.verified)
               : undefined
         }
       />

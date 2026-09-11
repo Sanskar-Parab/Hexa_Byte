@@ -250,6 +250,13 @@ function EnrollmentSection({
   );
 }
 
+function evidenceLabel(level?: string | null, verified?: boolean): string {
+  const lvl = (level || (verified ? "verified" : "self_reported")).toLowerCase();
+  if (lvl === "verified") return "✓ Verified";
+  if (lvl === "evidence_submitted") return "Evidence submitted";
+  return "Self-reported";
+}
+
 function EmploymentSection({
   enrollments,
   outcomes,
@@ -261,6 +268,22 @@ function EmploymentSection({
 }) {
   const activeOutcome = outcomes.find((o) => !o.employment_end_date) || outcomes[0] || null;
   const [mode, setMode] = useState<"none" | "employment" | "checkin">("none");
+  const [evidenceBusy, setEvidenceBusy] = useState(false);
+  const [evidenceError, setEvidenceError] = useState<string | null>(null);
+
+  const handleSubmitEvidence = async () => {
+    if (!activeOutcome) return;
+    setEvidenceBusy(true);
+    setEvidenceError(null);
+    try {
+      await api.submitOutcomeEvidence(activeOutcome.id);
+      onSubmitted();
+    } catch (err: any) {
+      setEvidenceError(err.message || "Failed to submit evidence");
+    } finally {
+      setEvidenceBusy(false);
+    }
+  };
 
   return (
     <Card>
@@ -283,10 +306,27 @@ function EmploymentSection({
       </CardHeader>
       <CardContent>
         {activeOutcome && mode === "none" && (
-          <div className="rounded-lg border border-hairline p-3 text-sm">
-            <span className="font-medium capitalize text-ink">{activeOutcome.employment_status.replace("_", " ")}</span>
-            {activeOutcome.job_title && <span className="ml-2 text-body">{activeOutcome.job_title}</span>}
-            {activeOutcome.company_name && <span className="ml-1 text-mute">at {activeOutcome.company_name}</span>}
+          <div className="space-y-2">
+            <div className="rounded-lg border border-hairline p-3 text-sm">
+              <span className="font-medium capitalize text-ink">{activeOutcome.employment_status.replace("_", " ")}</span>
+              {activeOutcome.job_title && <span className="ml-2 text-body">{activeOutcome.job_title}</span>}
+              {activeOutcome.company_name && <span className="ml-1 text-mute">at {activeOutcome.company_name}</span>}
+              <span className="ml-2 inline-flex items-center rounded-full bg-canvas-soft2 px-2 py-0.5 text-xs font-medium text-body">
+                {evidenceLabel((activeOutcome as any).evidence_level, activeOutcome.verified)}
+              </span>
+            </div>
+            {(activeOutcome as any).evidence_level !== "verified" && !activeOutcome.verified && activeOutcome.employment_status === "self_employed" && (
+              <div className="flex items-center gap-2">
+                {(activeOutcome as any).evidence_level === "evidence_submitted" ? (
+                  <span className="text-xs text-body">Evidence submitted — awaiting admin verification</span>
+                ) : (
+                  <Button variant="outline" size="sm" onClick={handleSubmitEvidence} disabled={evidenceBusy}>
+                    {evidenceBusy ? "Submitting..." : "Submit evidence"}
+                  </Button>
+                )}
+                {evidenceError && <span className="text-xs text-err-deep">{evidenceError}</span>}
+              </div>
+            )}
           </div>
         )}
         {!activeOutcome && mode === "none" && (

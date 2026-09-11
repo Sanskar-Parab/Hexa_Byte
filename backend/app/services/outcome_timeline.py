@@ -189,6 +189,8 @@ def build_outcome_timeline(
             "source_opportunity_id": outcome.source_opportunity_id,
             "source_opportunity_title": outcome.source_opportunity_title,
             "verified": outcome.verified,
+            "source": getattr(outcome, "source", None),
+            "evidence_level": getattr(outcome, "evidence_level", None) or ("verified" if getattr(outcome, "verified", False) else "self_reported"),
         }
         employment_block = {
             "company_name": outcome.company_name,
