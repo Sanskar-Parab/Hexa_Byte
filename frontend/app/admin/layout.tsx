@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { ShieldAlert, LogOut } from "lucide-react";
+import { useRouter, usePathname } from "next/navigation";
+import Link from "next/link";
+import { ShieldAlert, LogOut, LayoutDashboard, Users, Eye } from "lucide-react";
 import { Logo } from "@/components/layout/Logo";
 import { Button } from "@/components/ui/button";
 import { LoadingState } from "@/components/ui/loading-state";
@@ -14,6 +15,7 @@ import { useAuth } from "@/hooks/useAuth";
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -45,16 +47,38 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
+  const navItems = [
+    { href: "/admin/outcomes", label: "Outcomes", icon: LayoutDashboard },
+    { href: "/admin/trainees", label: "Trainee Identity", icon: Users },
+    { href: "/admin/identity-reviews", label: "Reviews", icon: Eye },
+  ];
+
   return (
     <div className="min-h-screen bg-canvas-soft">
       <header className="sticky top-0 z-50 w-full border-b border-hairline bg-ink text-white">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3">
-            <Logo size="sm" className="[&_span:last-child]:text-white [&_span:last-child_span]:text-cyan" />
-            <span className="hidden h-5 w-px bg-white/20 sm:block" />
-            <span className="hidden text-sm font-medium text-white/80 sm:block">
-              Skilling Impact Dashboard
-            </span>
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-3">
+              <Logo size="sm" className="[&_span:last-child]:text-white [&_span:last-child_span]:text-cyan" />
+              <span className="hidden h-5 w-px bg-white/20 sm:block" />
+              <span className="hidden text-sm font-medium text-white/80 sm:block">
+                Skilling Impact Dashboard
+              </span>
+            </div>
+            <nav className="hidden items-center gap-1 md:flex">
+              {navItems.map((item) => {
+                const active = pathname?.startsWith(item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${active ? "bg-white/15 text-white" : "text-white/60 hover:bg-white/10 hover:text-white"}`}
+                  >
+                    <item.icon className="h-3.5 w-3.5" /> {item.label}
+                  </Link>
+                );
+              })}
+            </nav>
           </div>
           <div className="flex items-center gap-3">
             <span className="text-xs text-white/60">{user.name}</span>
@@ -67,6 +91,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <LogOut className="mr-1.5 h-3.5 w-3.5" /> Sign out
             </Button>
           </div>
+        </div>
+        {/* mobile nav */}
+        <div className="flex items-center gap-1 border-t border-white/10 px-4 py-2 md:hidden">
+          {navItems.map((item) => {
+            const active = pathname?.startsWith(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`inline-flex flex-1 items-center justify-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium ${active ? "bg-white/15 text-white" : "text-white/60"}`}
+              >
+                <item.icon className="h-3.5 w-3.5" /> {item.label}
+              </Link>
+            );
+          })}
         </div>
       </header>
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">{children}</main>

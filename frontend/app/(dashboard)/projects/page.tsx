@@ -51,8 +51,8 @@ export default function ProjectsPage() {
         const recs = await api.getStoredRecommendations().catch(() => []);
         if (recs.length > 0) {
           careerId = recs[0].career_id;
-          localStorage.setItem("selectedCareerId", careerId);
-          projectData = await api.getProjectRecommendations(careerId).catch(() => []);
+          if (careerId) localStorage.setItem("selectedCareerId", careerId);
+          projectData = careerId ? await api.getProjectRecommendations(careerId).catch(() => []) : [];
         }
       }
 

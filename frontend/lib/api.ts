@@ -374,6 +374,50 @@ export const api = {
     fetcher<{ message: string; created: boolean; trainees_created: number }>("/admin/outcomes/demo-data", {
       method: "POST",
     }),
+
+  // --- Trainee Identity Resolution (SIH 26135) ---
+
+  listMasters: (params?: { page?: number; page_size?: number; search?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.page) q.set("page", String(params.page));
+    if (params?.page_size) q.set("page_size", String(params.page_size));
+    if (params?.search) q.set("search", params.search);
+    const qs = q.toString();
+    return fetcher<import("@/types").ListMastersResponse>(`/admin/trainees${qs ? `?${qs}` : ""}`);
+  },
+
+  getMasterDetail: (masterId: string) =>
+    fetcher<import("@/types").MasterTraineeDetail>(`/admin/trainees/${masterId}`),
+
+  previewTraineeMatch: (data: { trainee_name: string; dob: string; phone?: string; program_name: string; program_trainee_id: string }) =>
+    fetcher<import("@/types").MatchResult>("/admin/trainees/match-preview", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  createTraineeRecord: (data: { trainee_name: string; dob: string; phone?: string; program_name: string; program_trainee_id: string }) =>
+    fetcher<import("@/types").CreateTraineeResponse>("/admin/trainees", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  listIdentityReviews: (params?: { status?: string; page?: number; page_size?: number }) => {
+    const q = new URLSearchParams();
+    if (params?.status) q.set("status", params.status);
+    if (params?.page) q.set("page", String(params.page));
+    if (params?.page_size) q.set("page_size", String(params.page_size));
+    const qs = q.toString();
+    return fetcher<import("@/types").ListReviewsResponse>(`/admin/identity-reviews${qs ? `?${qs}` : ""}`);
+  },
+
+  getIdentityReview: (reviewId: string) =>
+    fetcher<import("@/types").IdentityReview>(`/admin/identity-reviews/${reviewId}`),
+
+  decideIdentityReview: (reviewId: string, decision: "link" | "reject") =>
+    fetcher<{ review: any; master: any; record: any; message: string }>(`/admin/identity-reviews/${reviewId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ decision }),
+    }),
 };
 
 function adminFilterQuery(filters?: import("@/types").AdminAnalyticsFilters): string {

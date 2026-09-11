@@ -89,7 +89,7 @@ class EmploymentOutcome(Base):
     training_enrollment_id = Column(GUID(), ForeignKey("training_enrollments.id"), nullable=True, index=True)
 
     employment_status = Column(String, nullable=False, default="not_employed")
-    # not_employed, placed, employed, self_employed, looking_for_work
+    # not_employed, placed, employed, self_employed, looking_for_work, unreachable, declined_to_respond
     employment_type = Column(String, nullable=True)  # full_time, part_time, contract, internship, freelance
     company_name = Column(String, nullable=True)
     job_title = Column(String, nullable=True)
@@ -146,6 +146,7 @@ class OutcomeCheckIn(Base):
     still_employed = Column(Boolean, nullable=True)
     reason_for_leaving = Column(Text, nullable=True)
     notes = Column(Text, nullable=True)
+    outreach_result = Column(String, nullable=True)  # responded, attempted_no_response, not_attempted
     created_at = Column(DateTime, default=datetime.utcnow)
 
     employment_outcome = relationship("EmploymentOutcome", back_populates="check_ins")

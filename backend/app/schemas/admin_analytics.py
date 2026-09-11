@@ -11,7 +11,10 @@ class CohortMetrics(BaseModel):
     employment_rate: Optional[float] = None
     self_employment_rate: Optional[float] = None
     unemployment_rate: Optional[float] = None
+    unreachable_rate: Optional[float] = None
+    declined_to_respond_rate: Optional[float] = None
     non_placement_rate: Optional[float] = None
+    consent_coverage_pct: Optional[float] = None
     retention_3_month_rate: Optional[float] = None
     retention_6_month_rate: Optional[float] = None
     retention_12_month_rate: Optional[float] = None
@@ -23,6 +26,7 @@ class CohortMetrics(BaseModel):
 
 class ProviderComparisonRow(CohortMetrics):
     provider_name: str
+    high_unreachable_flag: bool = False
 
 
 class SkillGapRow(BaseModel):

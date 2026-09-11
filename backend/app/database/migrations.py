@@ -21,6 +21,7 @@ from app.models.outcome import (
     OutcomeCheckIn,
     OutcomeConsent,
 )
+from app.models.trainee_identity import MasterTrainee, TraineeProgramRecord, IdentityReview
 
 
 def _column_exists(conn, table_name, column_name):
@@ -54,6 +55,8 @@ def run_migrations():
             conn.execute(text("ALTER TABLE employment_outcomes ADD COLUMN source_opportunity_title VARCHAR"))
         if not _column_exists(conn, "users", "is_admin"):
             conn.execute(text("ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT 0"))
+        if not _column_exists(conn, "outcome_check_ins", "outreach_result"):
+            conn.execute(text("ALTER TABLE outcome_check_ins ADD COLUMN outreach_result VARCHAR"))
 
     # Create new tables for Phase 6
     Resume.__table__.create(bind=engine, checkfirst=True)
@@ -66,3 +69,8 @@ def run_migrations():
     EmploymentOutcome.__table__.create(bind=engine, checkfirst=True)
     OutcomeCheckIn.__table__.create(bind=engine, checkfirst=True)
     OutcomeConsent.__table__.create(bind=engine, checkfirst=True)
+
+    # Trainee Identity Resolution (SIH 26135)
+    MasterTrainee.__table__.create(bind=engine, checkfirst=True)
+    TraineeProgramRecord.__table__.create(bind=engine, checkfirst=True)
+    IdentityReview.__table__.create(bind=engine, checkfirst=True)

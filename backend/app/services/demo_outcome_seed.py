@@ -3,7 +3,7 @@
 For hackathon demonstration only — this is never real Maharashtra Government
 data. Every seeded trainee reuses the existing `User.is_demo` flag (the same
 one the student demo account already uses) and an unmistakably synthetic
-email domain, and both training providers are named with a "(Demo)" suffix
+email domain, and all three training providers are named with a "(Demo)" suffix
 so they're visually distinct in the provider comparison table. The admin
 dashboard surfaces `demo_trainee_count` on every cohort metric (see
 app.services.admin_analytics) so demo data is always visible and
@@ -31,6 +31,7 @@ from app.utils.auth import get_password_hash
 DEMO_EMAIL_DOMAIN = "demo.nextpath.local"
 DEMO_PROVIDER_A = "Acme Skilling (Demo)"
 DEMO_PROVIDER_B = "Bright Future Institute (Demo)"
+DEMO_PROVIDER_C = "Skill Bridge Foundation (Demo)"
 DEMO_SKILLS = ["JavaScript", "React", "Node.js", "SQL", "Git", "Python", "Data Analysis"]
 
 
@@ -58,9 +59,15 @@ def seed_demo_outcome_data(db: Session) -> dict[str, Any]:
         career_domain="Data Science", skill_names=["Python", "SQL", "Data Analysis"],
         status="completed",
     ))
+    program_c = outcome_service.create_training_program(db, TrainingProgramCreate(
+        name="Retail & Customer Service Skills", provider_name=DEMO_PROVIDER_C,
+        career_domain="Customer Service", skill_names=["Python", "SQL"],
+        status="completed",
+    ))
 
     random.seed(42)
     created_count = 0
+    created_users: list = []
 
     def make_trainee(i, program, tag, placed, employed, salary=None, retained=None, months_ago=8, skills=None):
         nonlocal created_count
@@ -74,6 +81,7 @@ def seed_demo_outcome_data(db: Session) -> dict[str, Any]:
         db.commit()
         db.refresh(user)
         created_count += 1
+        created_users.append(user)
 
         enrollment = outcome_service.create_enrollment(db, user.id, TrainingEnrollmentCreate(
             training_program_id=program.id,
@@ -134,5 +142,75 @@ def seed_demo_outcome_data(db: Session) -> dict[str, Any]:
             i, program_b, "b", placed=(i < 2), employed=True,
             salary=280000, retained=True, skills={"Python": 4, "SQL": 4},
         )
+
+    def make_non_contact_trainee(i, program, tag, status, outreach_result=None):
+        """A trainee whose outcome is unreachable/declined_to_respond, with an
+        optional check-in recording whether contact was actually attempted."""
+        nonlocal created_count
+        user = User(
+            email=f"{tag}{i}@{DEMO_EMAIL_DOMAIN}",
+            name=f"Demo Trainee {tag.upper()}{i}",
+            password_hash=get_password_hash("demo-outcome-seed"),
+            is_demo=True,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        created_count += 1
+        created_users.append(user)
+
+        enrollment = outcome_service.create_enrollment(db, user.id, TrainingEnrollmentCreate(
+            training_program_id=program.id,
+            enrollment_date=_add_months(date.today(), -12),
+        ))
+        outcome_service.update_enrollment(db, enrollment, TrainingEnrollmentUpdate(status="completed"))
+        db.commit()
+
+        outcome = outcome_service.create_employment_outcome(db, user.id, EmploymentOutcomeCreate(
+            employment_status=status,
+        ))
+        outcome.training_enrollment_id = enrollment.id
+        db.commit()
+        db.refresh(outcome)
+
+        if outreach_result is not None:
+            outcome_service.create_check_in(db, outcome, OutcomeCheckInCreate(
+                employment_outcome_id=outcome.id,
+                employment_status=status,
+                outreach_result=outreach_result,
+            ))
+
+    # Program A: non-contact outcomes, kept on the large program so its cohort
+    # stays above MIN_COHORT_SIZE. The two unreachable check-ins contrast
+    # "we never tried" (not_attempted) with "we tried and got nothing"
+    # (attempted_no_response).
+    make_non_contact_trainee(0, program_a, "u", "unreachable", outreach_result="not_attempted")
+    make_non_contact_trainee(1, program_a, "u", "unreachable", outreach_result="attempted_no_response")
+    make_non_contact_trainee(2, program_a, "u", "unreachable")
+    make_non_contact_trainee(0, program_a, "d", "declined_to_respond")
+    make_non_contact_trainee(1, program_a, "d", "declined_to_respond")
+
+    # Program C: deliberately weak follow-up, so the provider comparison's
+    # high_unreachable_flag has something real to fire on in the demo.
+    # 6 trainees, 5 unreachable (83.3%) vs Acme's ~23%: with two
+    # sufficient-sample providers the flag needs the high provider above
+    # 3x the other's rate (rate > 1.5x the 2-provider average), so 4-of-6
+    # (66.7%) would sit just under the threshold while 5-of-6 clears it
+    # unambiguously. The single employed trainee keeps the cohort realistic.
+    for i in range(5):
+        make_non_contact_trainee(i, program_c, "c", "unreachable")
+    make_trainee(
+        0, program_c, "ce", placed=True, employed=True,
+        salary=250000, retained=True, skills={"Python": 3, "SQL": 3},
+    )
+
+    # Vary consent across the whole demo set so consent_coverage_pct reads as
+    # a realistic mid-range share: most consented, a few with no record, one revoked.
+    for idx, user in enumerate(created_users):
+        if idx % 3 == 2 and idx != 5:
+            continue  # no consent record at all
+        outcome_service.set_consent(db, user.id, True)
+        if idx == 5:
+            outcome_service.set_consent(db, user.id, False)  # revoked
 
     return {"message": "Demo outcome dataset created", "created": True, "trainees_created": created_count}

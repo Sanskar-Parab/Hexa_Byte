@@ -29,12 +29,24 @@ export function ProviderTable({ providers }: { providers: ProviderComparisonRow[
                   <th className="py-2 pr-4">6-mo Retention</th>
                   <th className="py-2 pr-4">Avg. Salary</th>
                   <th className="py-2 pr-4">Training Relevance</th>
+                  <th className="py-2 pr-4">Unreachable</th>
                 </tr>
               </thead>
               <tbody>
                 {providers.map((p) => (
                   <tr key={p.provider_name} className="border-b border-hairline last:border-0">
-                    <td className="py-3 pr-4 font-medium text-ink">{p.provider_name}</td>
+                    <td className="py-3 pr-4 font-medium text-ink">
+                      {p.provider_name}
+                      {p.high_unreachable_flag && (
+                        <Badge
+                          variant="warning"
+                          className="ml-2 text-[10px]"
+                          title="This provider's unreachable rate is notably higher than other providers — may indicate weaker follow-up practices."
+                        >
+                          High unreachable rate
+                        </Badge>
+                      )}
+                    </td>
                     <td className="py-3 pr-4 text-body">
                       {p.trainee_count}
                       {!p.sample_size_sufficient && (
@@ -49,6 +61,7 @@ export function ProviderTable({ providers }: { providers: ProviderComparisonRow[
                       {p.average_current_salary === null ? "No data" : formatCurrency(p.average_current_salary)}
                     </td>
                     <td className="py-3 pr-4 text-body">{formatPercent(p.training_relevant_employment_rate)}</td>
+                    <td className="py-3 pr-4 text-body">{formatPercent(p.unreachable_rate)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -57,6 +70,7 @@ export function ProviderTable({ providers }: { providers: ProviderComparisonRow[
         )}
         <p className="mt-3 text-xs text-mute">
           Providers with fewer than 5 trainees show trainee count only — rates are suppressed rather than shown as an unreliable ranking.
+          Providers flagged “High unreachable rate” have an unreachable rate more than 1.5× the cross-provider average — this may indicate weaker follow-up practices.
         </p>
       </CardContent>
     </Card>

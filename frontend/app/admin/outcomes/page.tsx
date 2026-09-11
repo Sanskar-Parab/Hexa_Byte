@@ -3,10 +3,12 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   Users, GraduationCap, Briefcase, Building2, TrendingUp, TrendingDown,
-  Wallet, UserCheck, Target,
+  Wallet, UserCheck, UserX, UserMinus, ShieldCheck, Target,
 } from "lucide-react";
+import Link from "next/link";
 import { SectionHeader } from "@/components/ui/section-header";
 import { LoadingState } from "@/components/ui/loading-state";
+import { Button } from "@/components/ui/button";
 import { MetricCard } from "@/components/admin/MetricCard";
 import { FilterBar } from "@/components/admin/FilterBar";
 import { RetentionChart } from "@/components/admin/RetentionChart";
@@ -89,6 +91,15 @@ export default function AdminOutcomesPage() {
         />
       )}
 
+      <div className="flex flex-wrap gap-2">
+        <Link href="/admin/trainees">
+          <Button>+ Add Programme Details</Button>
+        </Link>
+        <Link href="/admin/identity-reviews">
+          <Button variant="outline">View Identity Reviews</Button>
+        </Link>
+      </div>
+
       <FilterBar filters={filters} options={filterOptions} onChange={setFilters} />
 
       {loading && <LoadingState message="Computing analytics..." />}
@@ -101,6 +112,8 @@ export default function AdminOutcomesPage() {
               <MetricCard icon={GraduationCap} label="Training Completion" value={overview.training_completion_rate} isPercent />
               <MetricCard icon={Briefcase} label="Placement Rate" value={overview.placement_rate} isPercent />
               <MetricCard icon={UserCheck} label="Non-Placement Rate" value={overview.non_placement_rate} isPercent />
+              <MetricCard icon={ShieldCheck} label="Consent Coverage" value={overview.consent_coverage_pct} isPercent
+                meta="Trainees with active outcome consent" />
             </div>
             {!overview.sample_size_sufficient && overview.trainee_count > 0 && (
               <p className="mt-3 text-xs text-warn-deep">
@@ -132,6 +145,8 @@ export default function AdminOutcomesPage() {
               <MetricCard icon={Briefcase} label="Employment Rate" value={overview.employment_rate} isPercent />
               <MetricCard icon={Building2} label="Self Employment Rate" value={overview.self_employment_rate} isPercent />
               <MetricCard icon={UserCheck} label="Unemployment Rate" value={overview.unemployment_rate} isPercent />
+              <MetricCard icon={UserX} label="Unreachable Rate" value={overview.unreachable_rate} isPercent />
+              <MetricCard icon={UserMinus} label="Declined to Respond Rate" value={overview.declined_to_respond_rate} isPercent />
               <MetricCard
                 icon={overview.wage_growth_percentage !== null && overview.wage_growth_percentage < 0 ? TrendingDown : TrendingUp}
                 label="Wage Growth"

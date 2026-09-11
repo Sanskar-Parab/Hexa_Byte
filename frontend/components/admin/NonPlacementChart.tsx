@@ -9,6 +9,8 @@ import type { NonPlacementCategoryRow } from "@/types";
 const CATEGORY_LABELS: Record<string, string> = {
   skill_gap: "Skill Gap",
   profile_incomplete: "Incomplete Profile",
+  unreachable: "Unreachable",
+  declined_to_respond: "Declined to Respond",
   unknown: "Unknown",
 };
 

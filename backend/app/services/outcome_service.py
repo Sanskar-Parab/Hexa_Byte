@@ -237,6 +237,7 @@ def create_check_in(db: Session, employment_outcome: EmploymentOutcome, data) ->
         still_employed=data.still_employed,
         reason_for_leaving=data.reason_for_leaving,
         notes=data.notes,
+        outreach_result=getattr(data, "outreach_result", None),
     )
     db.add(check_in)
     db.commit()

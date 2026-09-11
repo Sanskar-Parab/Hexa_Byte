@@ -260,6 +260,49 @@ class TestProviderComparison:
         assert results[0]["provider_name"] == "Big Provider"
 
 
+class TestHighUnreachableFlag:
+    def _seed_provider(self, db, program, prefix, total, unreachable_count):
+        for i in range(total):
+            user = _make_user(db, f"{prefix}{i}@test.com")
+            enrollment = _enroll(db, user, program, status="completed")
+            status = "unreachable" if i < unreachable_count else "employed"
+            outcome = outcome_service.create_employment_outcome(
+                db, user.id, EmploymentOutcomeCreate(employment_status=status),
+            )
+            outcome.training_enrollment_id = enrollment.id
+            db.commit()
+
+    def test_high_unreachable_provider_flagged_normal_not(self, db):
+        program_normal = _make_program(db, provider_name="Normal Provider")
+        program_bad = _make_program(db, provider_name="Bad Provider")
+        # Normal: 10 trainees, 1 unreachable (10%). Bad: 10 trainees, 6 unreachable (60%).
+        # Cross-provider avg = 35%, 1.5x = 52.5% -> only Bad flags.
+        self._seed_provider(db, program_normal, "ok", 10, 1)
+        self._seed_provider(db, program_bad, "bad", 10, 6)
+
+        results = admin_analytics.get_provider_comparison(db, AnalyticsFilters())
+        by_name = {r["provider_name"]: r for r in results}
+
+        assert by_name["Normal Provider"]["unreachable_rate"] == 10.0
+        assert by_name["Bad Provider"]["unreachable_rate"] == 60.0
+        assert by_name["Bad Provider"]["high_unreachable_flag"] is True
+        assert by_name["Normal Provider"]["high_unreachable_flag"] is False
+
+    def test_small_sample_provider_never_flagged(self, db):
+        program_normal = _make_program(db, provider_name="Normal Provider")
+        program_tiny = _make_program(db, provider_name="Tiny Provider")
+        self._seed_provider(db, program_normal, "ok", 10, 1)  # 10% unreachable
+        # Tiny: 2 trainees, both unreachable -> rate suppressed, must never flag.
+        self._seed_provider(db, program_tiny, "tiny", 2, 2)
+
+        results = admin_analytics.get_provider_comparison(db, AnalyticsFilters())
+        by_name = {r["provider_name"]: r for r in results}
+
+        assert by_name["Tiny Provider"]["sample_size_sufficient"] is False
+        assert by_name["Tiny Provider"]["unreachable_rate"] is None
+        assert by_name["Tiny Provider"]["high_unreachable_flag"] is False
+
+
 class TestSkillGapAnalytics:
     def test_aggregates_real_gap_percentages(self, db):
         for name in ["JavaScript", "React", "Node.js"]:

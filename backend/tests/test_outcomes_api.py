@@ -226,7 +226,7 @@ class TestCheckInApi:
             months_since_employment=3, employment_status="employed", company_name=None,
             job_title=None, salary=None, salary_currency=None, salary_period=None,
             training_relevance="high", still_employed=True, reason_for_leaving=None,
-            notes=None, created_at=datetime.utcnow(),
+            notes=None, outreach_result=None, created_at=datetime.utcnow(),
         )
         client = TestClient(app)
         response = client.post(

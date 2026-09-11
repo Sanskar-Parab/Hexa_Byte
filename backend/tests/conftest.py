@@ -24,3 +24,6 @@ import app.services.outcome_timeline
 import app.services.outcome_ai_analysis
 import app.services.admin_analytics
 import app.services.demo_outcome_seed
+import app.models.trainee_identity
+import app.services.identity_matching
+import app.services.trainee_identity_service

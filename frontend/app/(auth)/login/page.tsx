@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Logo } from "@/components/layout/Logo";
 import { useAuth } from "@/hooks/useAuth";
+import { api } from "@/lib/api";
 
 export default function LoginPage() {
   const { login, loadDemo } = useAuth();
@@ -23,7 +24,17 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await login(form.email, form.password);
-      router.push("/dashboard");
+      // Admins go straight to government dashboard, students to dashboard
+      try {
+        const me = await api.getMe();
+        if (me?.is_admin) {
+          router.push("/admin/outcomes");
+        } else {
+          router.push("/dashboard");
+        }
+      } catch {
+        router.push("/dashboard");
+      }
     } catch (err: any) {
       setError(err.message || "Login failed");
     } finally {

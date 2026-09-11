@@ -598,7 +598,10 @@ export interface CohortMetrics {
   employment_rate: number | null;
   self_employment_rate: number | null;
   unemployment_rate: number | null;
+  unreachable_rate: number | null;
+  declined_to_respond_rate: number | null;
   non_placement_rate: number | null;
+  consent_coverage_pct: number | null;
   retention_3_month_rate: number | null;
   retention_6_month_rate: number | null;
   retention_12_month_rate: number | null;
@@ -610,6 +613,7 @@ export interface CohortMetrics {
 
 export interface ProviderComparisonRow extends CohortMetrics {
   provider_name: string;
+  high_unreachable_flag: boolean;
 }
 
 export interface SkillGapRow {
@@ -739,4 +743,112 @@ export interface OutcomeConsentState {
   consented: boolean;
   consent_date: string | null;
   revoked_at: string | null;
+}
+
+// --- Trainee Identity Resolution (SIH 26135) ----------------------------
+
+export interface MasterTrainee {
+  id: string;
+  master_code: string;
+  primary_name: string;
+  dob: string;
+  phone_numbers: string[];
+  masked_phones: string[];
+  linked_user_id: string | null;
+  created_at: string;
+  updated_at: string;
+  enrollment_count: number;
+}
+
+export interface TraineeProgramRecord {
+  id: string;
+  master_trainee_id: string;
+  program_name: string;
+  program_trainee_id: string;
+  trainee_name: string;
+  dob: string;
+  phone: string | null;
+  masked_phone: string | null;
+  created_at: string;
+}
+
+export interface MasterTraineeDetail {
+  master: MasterTrainee;
+  enrollments: TraineeProgramRecord[];
+  longitudinal: {
+    linked_user_id: string | null;
+    enrollment_count: number;
+    outcome_count: number;
+  } | null;
+}
+
+export interface FieldScores {
+  name: number;
+  dob: number;
+  phone: number;
+  program: number;
+}
+
+export interface MatchResult {
+  match_score: number;
+  confidence: "high" | "medium" | "low";
+  field_scores: FieldScores;
+  field_weights?: Record<string, number>;
+  matched: boolean;
+  master_id?: string | null;
+  master_code?: string | null;
+  matched_master?: {
+    id: string;
+    master_code: string;
+    primary_name: string;
+    dob: string;
+    phone_numbers: string[];
+    masked_phones: string[];
+    enrollments: { program_name: string; program_trainee_id: string; trainee_name: string; dob: string; phone: string | null }[];
+  } | null;
+}
+
+export interface CreateTraineeResponse {
+  action: "new_master" | "auto_linked" | "review_required";
+  confidence: string;
+  match_score: number;
+  field_scores: FieldScores;
+  master: MasterTrainee | null;
+  record: TraineeProgramRecord | null;
+  review: IdentityReview | null;
+  match_detail: MatchResult | null;
+  message: string | null;
+}
+
+export interface IdentityReview {
+  id: string;
+  incoming_name: string;
+  incoming_dob: string;
+  incoming_phone: string | null;
+  masked_phone: string | null;
+  incoming_program_name: string;
+  incoming_program_trainee_id: string;
+  matched_master_id: string | null;
+  match_score: number;
+  confidence: string;
+  field_scores: FieldScores;
+  status: "pending" | "approved" | "rejected";
+  created_at: string;
+  decided_at: string | null;
+  matched_master: MasterTrainee | null;
+  matched_master_enrollments: TraineeProgramRecord[];
+}
+
+export interface ListMastersResponse {
+  items: MasterTrainee[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface ListReviewsResponse {
+  items: IdentityReview[];
+  total: number;
+  page: number;
+  page_size: number;
 }

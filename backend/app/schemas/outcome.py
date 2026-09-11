@@ -6,11 +6,12 @@ from datetime import date, datetime
 TrainingProgramStatus = Literal["planned", "active", "completed", "cancelled"]
 EnrollmentStatus = Literal["enrolled", "in_progress", "completed", "dropped", "withdrawn"]
 CertificateStatus = Literal["not_issued", "pending", "issued"]
-EmploymentStatus = Literal["not_employed", "placed", "employed", "self_employed", "looking_for_work"]
+EmploymentStatus = Literal["not_employed", "placed", "employed", "self_employed", "looking_for_work", "unreachable", "declined_to_respond"]
 EmploymentType = Literal["full_time", "part_time", "contract", "internship", "freelance"]
 SalaryPeriod = Literal["hourly", "monthly", "annual"]
 OutcomeSource = Literal["self_reported", "training_provider", "verified_employer"]
 TrainingRelevance = Literal["high", "medium", "low", "unknown"]
+OutreachResult = Literal["responded", "attempted_no_response", "not_attempted"]
 
 
 # ---------------------------------------------------------------------------
@@ -193,6 +194,7 @@ class OutcomeCheckInCreate(BaseModel):
     still_employed: Optional[bool] = None
     reason_for_leaving: Optional[str] = None
     notes: Optional[str] = None
+    outreach_result: Optional[OutreachResult] = None
 
     @field_validator("check_in_date")
     @classmethod
@@ -217,6 +219,7 @@ class OutcomeCheckInResponse(BaseModel):
     still_employed: Optional[bool] = None
     reason_for_leaving: Optional[str] = None
     notes: Optional[str] = None
+    outreach_result: Optional[str] = None
     created_at: datetime
 
     class Config:

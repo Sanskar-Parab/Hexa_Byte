@@ -28,7 +28,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from app.models.outcome import TrainingEnrollment, TrainingProgram, EmploymentOutcome, OutcomeCheckIn
+from app.models.outcome import TrainingEnrollment, TrainingProgram, EmploymentOutcome, OutcomeCheckIn, OutcomeConsent
 from app.models.user import User
 from app.services import outcome_service, training_intelligence, outcome_ai_analysis
 from app.services.outcome_timeline import _add_months, _retention_at_milestone, MILESTONE_MONTHS
@@ -36,9 +36,11 @@ from app.services.opportunity_recommendation import get_user_skill_map
 
 MIN_COHORT_SIZE = 5
 RECURRING_GAP_THRESHOLD_PCT = 30.0
+HIGH_UNREACHABLE_MULTIPLIER = 1.5
 
 PLACED_STATUSES = {"placed", "employed", "self_employed"}
 NOT_PLACED_STATUSES = {"not_employed", "looking_for_work"}
+NON_CONTACT_STATUSES = {"unreachable", "declined_to_respond"}
 RELEVANT_LEVELS = {"high", "medium"}
 TOP_SKILL_GAPS_LIMIT = 10
 
@@ -147,6 +149,8 @@ def _overall_counts(records: list[TraineeRecord]) -> dict:
     employed = sum(1 for r in with_outcome if r.outcome.employment_status == "employed")
     self_employed = sum(1 for r in with_outcome if r.outcome.employment_status == "self_employed")
     not_placed_explicit = sum(1 for r in with_outcome if r.outcome.employment_status in NOT_PLACED_STATUSES)
+    unreachable = sum(1 for r in with_outcome if r.outcome.employment_status == "unreachable")
+    declined_to_respond = sum(1 for r in with_outcome if r.outcome.employment_status == "declined_to_respond")
 
     return {
         "total": total,
@@ -155,6 +159,8 @@ def _overall_counts(records: list[TraineeRecord]) -> dict:
         "employed": employed,
         "self_employed": self_employed,
         "not_placed_explicit": not_placed_explicit,
+        "unreachable": unreachable,
+        "declined_to_respond": declined_to_respond,
         "non_placed": total - placed,
     }
 
@@ -249,6 +255,27 @@ def _training_relevance_metrics(db: Session, records: list[TraineeRecord]) -> di
     return {"relevant_count": relevant, "evaluated_count": evaluated, "rate": _rate(relevant, evaluated)}
 
 
+def _consent_coverage_pct(db: Session, records: list[TraineeRecord]) -> float | None:
+    """Share of the filtered cohort with active outcome consent
+    (OutcomeConsent.consented=True and not revoked)."""
+    total = len(records)
+    if total == 0:
+        return None
+    user_ids = {r.user_id for r in records}
+    if not user_ids:
+        return None
+    consented_count = (
+        db.query(OutcomeConsent)
+        .filter(
+            OutcomeConsent.user_id.in_(list(user_ids)),
+            OutcomeConsent.consented.is_(True),
+            OutcomeConsent.revoked_at.is_(None),
+        )
+        .count()
+    )
+    return _rate(consented_count, total)
+
+
 def _cohort_metrics(db: Session, records: list[TraineeRecord]) -> dict:
     """The full metric suite for one cohort (all trainees, one provider, or
     one program) — the shared computation behind overview/provider/program views."""
@@ -256,6 +283,7 @@ def _cohort_metrics(db: Session, records: list[TraineeRecord]) -> dict:
     retention = _retention_rates(records)
     salary = _salary_metrics(records)
     relevance = _training_relevance_metrics(db, records)
+    consent_coverage = _consent_coverage_pct(db, records)
     total = counts["total"]
     sufficient = total >= MIN_COHORT_SIZE
 
@@ -268,7 +296,10 @@ def _cohort_metrics(db: Session, records: list[TraineeRecord]) -> dict:
         "employment_rate": _rate(counts["employed"], total),
         "self_employment_rate": _rate(counts["self_employed"], total),
         "unemployment_rate": _rate(counts["not_placed_explicit"], total),
+        "unreachable_rate": _rate(counts["unreachable"], total),
+        "declined_to_respond_rate": _rate(counts["declined_to_respond"], total),
         "non_placement_rate": _rate(counts["non_placed"], total),
+        "consent_coverage_pct": consent_coverage,
         "retention_3_month_rate": retention["3_month"]["rate"],
         "retention_6_month_rate": retention["6_month"]["rate"],
         "retention_12_month_rate": retention["12_month"]["rate"],
@@ -311,6 +342,26 @@ def get_provider_comparison(db: Session, filters: AnalyticsFilters) -> list[dict
     for provider_name, group_records in groups.items():
         row = {"provider_name": provider_name, **_cohort_metrics(db, group_records)}
         results.append(row)
+
+    # Data-reliability flag: a provider whose unreachable_rate is notably
+    # higher than its peers may have weaker follow-up practices. Compare
+    # only sufficient-sample providers (small cohorts are already
+    # suppressed/unreliable and must never be flagged).
+    sufficient_rates = [
+        r["unreachable_rate"] for r in results
+        if r["sample_size_sufficient"] and r["unreachable_rate"] is not None
+    ]
+    avg_unreachable = (
+        round(sum(sufficient_rates) / len(sufficient_rates), 1)
+        if sufficient_rates else None
+    )
+    for r in results:
+        r["high_unreachable_flag"] = bool(
+            r["sample_size_sufficient"]
+            and r["unreachable_rate"] is not None
+            and avg_unreachable is not None
+            and r["unreachable_rate"] > HIGH_UNREACHABLE_MULTIPLIER * avg_unreachable
+        )
 
     results.sort(key=lambda r: (
         not r["sample_size_sufficient"],
@@ -403,10 +454,13 @@ def get_non_placement_analytics(db: Session, filters: AnalyticsFilters) -> list[
 
     counts: dict[str, int] = {}
     for r in non_placed:
-        _, signal_evidence = outcome_ai_analysis._gather_non_placement_evidence(
-            db, r.user_id, career_id=None, training_enrollment_id=r.enrollment.id,
-        )
-        category = _classify_non_placement(signal_evidence)
+        if r.outcome and r.outcome.employment_status in NON_CONTACT_STATUSES:
+            category = r.outcome.employment_status
+        else:
+            _, signal_evidence = outcome_ai_analysis._gather_non_placement_evidence(
+                db, r.user_id, career_id=None, training_enrollment_id=r.enrollment.id,
+            )
+            category = _classify_non_placement(signal_evidence)
         counts[category] = counts.get(category, 0) + 1
 
     return [
@@ -481,5 +535,5 @@ def get_filter_options(db: Session) -> dict:
         "career_domains": domains,
         "programs": programs,
         "locations": locations,
-        "employment_statuses": sorted(PLACED_STATUSES | NOT_PLACED_STATUSES),
+        "employment_statuses": sorted(PLACED_STATUSES | NOT_PLACED_STATUSES | NON_CONTACT_STATUSES),
     }
